@@ -33,3 +33,6 @@ class Ui:
             self.display.text(name, 4, i * (8 + OPTION_GAP), color)
 
         self.selected_option = (self.selected_option + motion) % len(self.options)
+
+        if self.hal.button_held():
+            self.options[self.selected_option][1]()
