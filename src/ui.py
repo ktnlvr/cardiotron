@@ -1,5 +1,3 @@
-from fifo import Fifo
-
 class Ui:
     def __init__(self, hal, options = []):
         self.hal = hal
@@ -22,10 +20,9 @@ class Ui:
             if not value:
                 break
             motion += value
-            print(motion)
 
         OPTION_GAP = 4
-        for i, (name, callback) in enumerate(self.options):
+        for i, (name, _) in enumerate(self.options):
             color = 1
             if i == self.selected_option:
                 self.display.fill_rect(4, i * (8 + OPTION_GAP) - 1, 80, 8 + 2, color)
@@ -34,5 +31,5 @@ class Ui:
 
         self.selected_option = (self.selected_option + motion) % len(self.options)
 
-        if self.hal.button_held():
+        if self.hal.button_short():
             self.options[self.selected_option][1]()
