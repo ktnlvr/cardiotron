@@ -1,9 +1,13 @@
 from machine import Pin, I2C
 from time import sleep_ms, ticks_ms
 from gc import collect as gc_collect
-import ssd1306
-
-from pins import (
+from constants import (
+    ROTARY_BUTTON_DEBOUNCE_MS,
+    LONG_PRESS_MS,
+    DISPLAY_WIDTH,
+    DISPLAY_HEIGHT,
+    CAT_SIZE_WIDTH,
+    CAT_SIZE_HEIGTH,
     PIN_ROTARY_A,
     PIN_SIGNAL_LED,
     PIN_ROTARY_B,
@@ -11,13 +15,7 @@ from pins import (
     PIN_I2C_DATA,
     PIN_ROTARY_BUTTON,
 )
-
-DISPLAY_H = 128
-DISPLAY_V = 64
-CAT_SIZE_H = 32
-CAT_SIZE_V = 32
-ROTARY_BUTTON_DEBOUNCE_MS = 100
-LONG_PRESS_MS = 250
+import ssd1306
 
 
 # Hardware abstraction layer over the Pico W
@@ -26,17 +24,13 @@ class HAL:
         self._state = initial_state
         self.onboard_led = Pin(PIN_SIGNAL_LED, Pin.OUT)
 
-        self.rotary_button = Pin(PIN_ROTARY_BUTTON, Pin.IN, Pin.PULL_UP)
-
-        self.rotary_button.irq(self._rotary_knob_press, trigger=Pin.IRQ_FALLING)
-
         self.rotary_debounce_timer_ms = 0
+        self.rotary_button = Pin(PIN_ROTARY_BUTTON, Pin.IN, Pin.PULL_UP)
+        self.rotary_button.irq(self._rotary_knob_press, trigger=Pin.IRQ_FALLING)
 
         self.rotary_a = Pin(PIN_ROTARY_A, Pin.IN, Pin.PULL_UP)
         self.rotary_b = Pin(PIN_ROTARY_B, Pin.IN, Pin.PULL_UP)
-
         self.rotary_a.irq(self._rotary_knob_rotate, Pin.IRQ_RISING, hard=True)
-
         self.rotary_motion = 0
 
         self.i2c = I2C(1, sda=Pin(PIN_I2C_DATA), scl=Pin(PIN_I2C_CLOCK))
@@ -62,7 +56,7 @@ class HAL:
         ticks_now_ms = ticks_ms()
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_now_ms:
             return
-        
+
         dt_ms = ticks_now_ms - self.rotary_debounce_timer_ms
         if dt_ms > LONG_PRESS_MS:
             self.long_button_press = True
@@ -77,11 +71,18 @@ class HAL:
         self.rotary_motion += 1 if self.rotary_b() else -1
 
     def pull_rotary(self):
+        """
+        Resets the state of the rotary knob and returns the accumulated motions.
+        """
         motion = self.rotary_motion
         self.rotary_motion = 0
         return motion
 
     def state(self, new_state=None):
+        """
+        Retrieve or set the current state.
+        Triggers state cleanup such as garbage collection.
+        """
         if new_state:
             if self._state is new_state:
                 return
@@ -91,32 +92,38 @@ class HAL:
         return self._state
 
     def button_held(self) -> bool:
-        # TODO: potentially catastrophic
-        # rewrite me to use better timers
-        if self.rotary_button.value() == 0:
-            sleep_ms(50)
-            self.onboard_led.toggle()
-            return self.rotary_button.value() == 0
-        return False
+        """
+        `True` if the button is currently being pressed, `False` otherwise.
+        """
+        return self.button_pressed_timer_running
 
     def button_long(self) -> bool:
+        """
+        `True` if the last press lasted for `LONG_PRESS_MS` or longer, `False` otherwise.
+        """
         if self.long_button_press:
             self.long_button_press = False
             return True
         return False
 
     def button_short(self) -> bool:
+        """
+        `True` if the button press lasted for less than `LONG_PRESS_MS`, `False` otherwise.
+        """
         if self.short_button_press:
             self.short_button_press = False
             return True
         return False
 
     def execute(self):
+        """
+        Run the current state once and update the display.
+        """
         self._state()
         self.display.show()
 
         # TODO: just for testing purposes
         # this is where the cat will be
         self.display.fill_rect(
-            DISPLAY_H - CAT_SIZE_H, DISPLAY_V - CAT_SIZE_V, DISPLAY_H, DISPLAY_V, 1
+            DISPLAY_WIDTH - CAT_SIZE_WIDTH, DISPLAY_HEIGHT - CAT_SIZE_HEIGTH, DISPLAY_WIDTH, DISPLAY_HEIGHT, 1
         )
