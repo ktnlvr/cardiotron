@@ -2,6 +2,10 @@
 
 Embedded heart sensor with supporting cloud infrastructure. Now with support for multiple hearts!
 
+## What makes it cool?
+
+- Not a single `sleep_ms` in the entire codebase. Interrupts all the way down.
+
 ## Setup 
 
 ### Running the Pico
