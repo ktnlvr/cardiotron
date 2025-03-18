@@ -1,5 +1,5 @@
 from machine import Pin, I2C
-from time import sleep_ms, ticks_ms
+from time import ticks_ms
 from gc import collect as gc_collect
 from constants import (
     ROTARY_BUTTON_DEBOUNCE_MS,
@@ -14,8 +14,11 @@ from constants import (
     PIN_I2C_CLOCK,
     PIN_I2C_DATA,
     PIN_ROTARY_BUTTON,
+    ROTARY_ROTATION_RESET_TIMEOUT_MS,
+    ROTARY_ROTATION_SENSETIVITY,
 )
 import ssd1306
+from fifo import Fifo
 
 
 # Hardware abstraction layer over the Pico W
@@ -31,7 +34,8 @@ class HAL:
         self.rotary_a = Pin(PIN_ROTARY_A, Pin.IN, Pin.PULL_UP)
         self.rotary_b = Pin(PIN_ROTARY_B, Pin.IN, Pin.PULL_UP)
         self.rotary_a.irq(self._rotary_knob_rotate, Pin.IRQ_RISING, hard=True)
-        self.rotary_motion = 0
+        self.rotary_accumulator = 0
+        self.rotary_motion_fifo = Fifo(32, 'b')
 
         self.i2c = I2C(1, sda=Pin(PIN_I2C_DATA), scl=Pin(PIN_I2C_CLOCK))
         self.display = ssd1306.SSD1306_I2C(128, 64, self.i2c)
@@ -40,6 +44,8 @@ class HAL:
         self.button_pressed_timer = 0
         self.long_button_press = False
         self.short_button_press = False
+
+        self.rotary_reset_timer_ms = 0
 
     def _rotary_knob_press(self, _):
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_ms():
@@ -68,15 +74,43 @@ class HAL:
         self.rotary_button.irq(self._rotary_knob_press, trigger=Pin.IRQ_FALLING)
 
     def _rotary_knob_rotate(self, _):
-        self.rotary_motion += 1 if self.rotary_b() else -1
+        self.rotary_reset_timer_ms = ticks_ms()
+        self.rotary_accumulator += 1 if self.rotary_b() else -1
+        print("acc: ", self.rotary_accumulator)
+
+        increment = False
+        half_threshold_hit = abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY // 2
+        threshold_hit = abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY
+        is_first_rotation = not self.rotary_motion_fifo.has_data()
+
+        increment |= threshold_hit or half_threshold_hit and is_first_rotation
+        increment |= abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY
+
+        if increment:
+            self.rotary_motion_fifo.put(1 if self.rotary_accumulator > 0 else -1)
+
+            rotary_accumulator = self.rotary_accumulator
+            rotary_accumulator = (
+                abs(self.rotary_accumulator) - ROTARY_ROTATION_SENSETIVITY
+            )
+            if self.rotary_accumulator < 0:
+                rotary_accumulator *= -1
+            self.rotary_accumulator = rotary_accumulator
+    
+    def rotary_motion_percentage(self):
+        """
+        Returns a value from 0 to 1, representing how much rotation is done.
+        """
+        return self.rotary_accumulator / ROTARY_ROTATION_SENSETIVITY
 
     def pull_rotary(self):
         """
         Resets the state of the rotary knob and returns the accumulated motions.
         """
-        motion = self.rotary_motion
-        self.rotary_motion = 0
-        return motion
+        if self.rotary_motion_fifo.has_data():
+            print("Fifo pulled")
+            return self.rotary_motion_fifo.get()
+        return 0
 
     def state(self, new_state=None):
         """
@@ -119,11 +153,21 @@ class HAL:
         """
         Run the current state once and update the display.
         """
+        if ticks_ms() - self.rotary_reset_timer_ms > ROTARY_ROTATION_RESET_TIMEOUT_MS:
+            if self.rotary_accumulator:
+                self.rotary_accumulator = 0
+                self.rotary_reset_timer_ms = 0
+                print("acc: ", self.rotary_accumulator, "reset")
+
         self._state()
         self.display.show()
 
         # TODO: just for testing purposes
         # this is where the cat will be
         self.display.fill_rect(
-            DISPLAY_WIDTH - CAT_SIZE_WIDTH, DISPLAY_HEIGHT - CAT_SIZE_HEIGTH, DISPLAY_WIDTH, DISPLAY_HEIGHT, 1
+            DISPLAY_WIDTH - CAT_SIZE_WIDTH,
+            DISPLAY_HEIGHT - CAT_SIZE_HEIGTH,
+            DISPLAY_WIDTH,
+            DISPLAY_HEIGHT,
+            1,
         )
