@@ -1,3 +1,5 @@
+from math import log
+
 PIN_SIGNAL_LED = "LED"
 PIN_ROTARY_A = 10
 PIN_ROTARY_B = 11
@@ -16,6 +18,10 @@ ROTARY_ROTATION_SENSETIVITY = 4
 ROTARY_ROTATION_RESET_TIMEOUT_MS = 250
 LONG_PRESS_MS = 200
 
-UI_OPTION_GAP = 8
+UI_OPTION_GAP = 6
 UI_LEFT_MARGIN = 4
 UI_TOP_MARGIN = 4
+
+# XXX: the UI transitions are non-linear, so they take some time to execute
+_UI_LERP_RATE = 0.5
+UI_LERP_RATE = log(_UI_LERP_RATE)

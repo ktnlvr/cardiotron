@@ -76,7 +76,6 @@ class HAL:
     def _rotary_knob_rotate(self, _):
         self.rotary_reset_timer_ms = ticks_ms()
         self.rotary_accumulator += 1 if self.rotary_b() else -1
-        print("acc: ", self.rotary_accumulator)
 
         increment = False
         half_threshold_hit = abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY // 2
@@ -108,7 +107,6 @@ class HAL:
         Resets the state of the rotary knob and returns the accumulated motions.
         """
         if self.rotary_motion_fifo.has_data():
-            print("Fifo pulled")
             return self.rotary_motion_fifo.get()
         return 0
 
@@ -157,7 +155,6 @@ class HAL:
             if self.rotary_accumulator:
                 self.rotary_accumulator = 0
                 self.rotary_reset_timer_ms = 0
-                print("acc: ", self.rotary_accumulator, "reset")
 
         self._state()
         self.display.show()
