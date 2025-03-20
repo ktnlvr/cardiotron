@@ -22,3 +22,9 @@ Embedded heart sensor with supporting cloud infrastructure. Now with support for
 ### Running the Server
 
 Unai San, pls :з
+
+## Usage
+
+## File Formats
+
+To see how the Pico stores its data investigate the files in [`examples/`](examples/). On the pico itself, the information is stored in the `data/` folder.

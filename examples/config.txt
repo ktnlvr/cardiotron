@@ -1,0 +1,5 @@
+WIFI_SSID: group11-network
+WIFI_PASSWD: qwerty123 
+KUBIOUS_ADDR: meow11.asuscomm.com
+TIMEZONE: Europe/Helsinki
+NTC_SERVERS: 129.6.15.28,129.6.15.29,129.6.15.30
