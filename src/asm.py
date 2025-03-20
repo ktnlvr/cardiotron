@@ -19,7 +19,7 @@ class Machine(HAL):
         self.main_menu_ui.tick()
     
     def toast(self):
-        if self.button_long():
+        if self.button():
             self.state(self.main_menu)
 
         self.display.fill(0)

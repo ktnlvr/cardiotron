@@ -18,7 +18,6 @@ from constants import (
     ROTARY_ROTATION_SENSETIVITY,
 )
 import ssd1306
-from fifo import Fifo
 
 
 # Hardware abstraction layer over the Pico W
@@ -35,7 +34,7 @@ class HAL:
         self.rotary_b = Pin(PIN_ROTARY_B, Pin.IN, Pin.PULL_UP)
         self.rotary_a.irq(self._rotary_knob_rotate, Pin.IRQ_RISING, hard=True)
         self.rotary_accumulator = 0
-        self.rotary_motion_fifo = Fifo(32, 'b')
+        self.rotary_motion_queue = 0
 
         self.i2c = I2C(1, sda=Pin(PIN_I2C_DATA), scl=Pin(PIN_I2C_CLOCK))
         self.display = ssd1306.SSD1306_I2C(128, 64, self.i2c)
@@ -78,15 +77,11 @@ class HAL:
         self.rotary_accumulator += 1 if self.rotary_b() else -1
 
         increment = False
-        half_threshold_hit = abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY // 2
         threshold_hit = abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY
-        is_first_rotation = not self.rotary_motion_fifo.has_data()
-
-        increment |= threshold_hit or half_threshold_hit and is_first_rotation
-        increment |= abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY
+        increment |= threshold_hit
 
         if increment:
-            self.rotary_motion_fifo.put(1 if self.rotary_accumulator > 0 else -1)
+            self.rotary_motion_queue = 1 if self.rotary_accumulator > 0 else -1
 
             rotary_accumulator = self.rotary_accumulator
             rotary_accumulator = (
@@ -106,8 +101,10 @@ class HAL:
         """
         Resets the state of the rotary knob and returns the accumulated motions.
         """
-        if self.rotary_motion_fifo.has_data():
-            return self.rotary_motion_fifo.get()
+        if self.rotary_motion_queue:
+            motion = self.rotary_motion_queue 
+            self.rotary_motion_queue = 0
+            return motion
         return 0
 
     def state(self, new_state=None):
@@ -128,10 +125,18 @@ class HAL:
         `True` if the button is currently being pressed, `False` otherwise.
         """
         return self.button_pressed_timer_running
+    
+    def button(self) -> bool:
+        """
+        `True` if button was generally pressed, `False` otherwise.
+        Resets the value of the button.
+        """
+        return self.button_long() or self.button_short()
 
     def button_long(self) -> bool:
         """
         `True` if the last press lasted for `LONG_PRESS_MS` or longer, `False` otherwise.
+        Resets the value of the button.
         """
         if self.long_button_press:
             self.long_button_press = False
@@ -141,6 +146,7 @@ class HAL:
     def button_short(self) -> bool:
         """
         `True` if the button press lasted for less than `LONG_PRESS_MS`, `False` otherwise.
+        Resets the value of the button.
         """
         if self.short_button_press:
             self.short_button_press = False
