@@ -10,6 +10,7 @@ Embedded heart sensor with supporting cloud infrastructure. Now with support for
 
 ### Running the Pico
 
+0. Before proceeding, save all the sensetive data on another drive and wipe the pico clean.
 1. Follow the library setup instructions at [Metropolia's Pico Setup Guide](https://gitlab.metropolia.fi/lansk/pico-test).
 2. Close all the apps that might use the COM port (VSCode, Thonny).
 3. Open Thonny, navigate to "View" > "Files" and check that the "lib" folder is non-empty.
