@@ -5,6 +5,7 @@ from constants import (
     CHAR_SIZE_HEIGHT,
     UI_TOP_MARGIN,
     UI_LERP_RATE,
+    DO_UI_LERP,
 )
 from math import exp
 from time import ticks_ms
@@ -58,12 +59,15 @@ class Ui:
                     text_y + selection_highlight_dy - UI_OPTION_GAP // 2
                 )
 
-                self.selection_highlight_y = stable_lerp(
-                    self.selection_highlight_y,
-                    target_selection_y,
-                    UI_LERP_RATE,
-                    self.dt,
-                )
+                if DO_UI_LERP:
+                    self.selection_highlight_y = stable_lerp(
+                        target_selection_y,
+                        self.selection_highlight_y,
+                        UI_LERP_RATE,
+                        self.dt,
+                    )
+                else:
+                    self.selection_highlight_y = target_selection_y
 
                 self.display.fill_rect(
                     text_x,
