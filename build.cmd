@@ -1,2 +1,2 @@
-mpremote cp -r src :
-mpremote run src/main.py
+python -m mpremote cp -r src :
+python -m mpremote run src/main.py
