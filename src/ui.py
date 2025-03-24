@@ -61,8 +61,8 @@ class Ui:
 
                 if DO_UI_LERP:
                     self.selection_highlight_y = stable_lerp(
-                        target_selection_y,
                         self.selection_highlight_y,
+                        target_selection_y,
                         UI_LERP_RATE,
                         self.dt,
                     )
