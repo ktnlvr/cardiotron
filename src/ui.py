@@ -6,6 +6,7 @@ from constants import (
     UI_TOP_MARGIN,
     UI_LERP_RATE,
     DO_UI_LERP,
+    ALPHA,
 )
 from math import exp
 from time import ticks_ms

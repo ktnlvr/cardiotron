@@ -1,4 +1,4 @@
-from machine import Pin, I2C
+from machine import Pin, I2C, ADC
 from time import ticks_ms
 from gc import collect as gc_collect
 from constants import (
@@ -16,6 +16,7 @@ from constants import (
     PIN_ROTARY_BUTTON,
     ROTARY_ROTATION_RESET_TIMEOUT_MS,
     ROTARY_ROTATION_SENSETIVITY,
+    PIN_SENSOR,
 )
 import ssd1306
 
@@ -25,6 +26,7 @@ class HAL:
     def __init__(self, initial_state=lambda: None):
         self._state = initial_state
         self.onboard_led = Pin(PIN_SIGNAL_LED, Pin.OUT)
+        self.sensor_pin_adc = ADC(Pin(PIN_SENSOR))
 
         self.rotary_debounce_timer_ms = 0
         self.rotary_button = Pin(PIN_ROTARY_BUTTON, Pin.IN, Pin.PULL_UP)
@@ -90,7 +92,7 @@ class HAL:
             if self.rotary_accumulator < 0:
                 rotary_accumulator *= -1
             self.rotary_accumulator = rotary_accumulator
-    
+
     def rotary_motion_percentage(self):
         """
         Returns a value from 0 to 1, representing how much rotation is done.
@@ -102,7 +104,7 @@ class HAL:
         Resets the state of the rotary knob and returns the accumulated motions.
         """
         if self.rotary_motion_queue:
-            motion = self.rotary_motion_queue 
+            motion = self.rotary_motion_queue
             self.rotary_motion_queue = 0
             return motion
         return 0
@@ -125,7 +127,7 @@ class HAL:
         `True` if the button is currently being pressed, `False` otherwise.
         """
         return self.button_pressed_timer_running
-    
+
     def button(self) -> bool:
         """
         `True` if button was generally pressed, `False` otherwise.

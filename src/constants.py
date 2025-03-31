@@ -39,3 +39,21 @@ UI_TOP_MARGIN = 4
 # Modify this as you see fit and test by feel.
 _UI_LERP_RATE = 0.5
 UI_LERP_RATE = log(_UI_LERP_RATE)
+
+# The sample rate of the heart beat sensor (in Hz)
+SAMPLE_RATE = 250
+# Time difference between each sample taken(in ms)
+TIMESTAMP_DIFFERENCE_SENSOR = 0.004
+# Alpha value for the low pass filter
+ALPHA = 0.5
+# Samples per pixel
+SAMPLES_PER_PIXEL = 5
+# Pin number of the heart beat sensor
+PIN_SENSOR = 27
+# Total samples to take in account when calculating heart beat measurements
+# Note: The total samples would be SAMPLE_SIZE * SAMPLES_PER_PIXEL
+SAMPLE_SIZE = 200
+# Last n values taken in consideration when the heart rate is calculated
+MEAN_WINDOW_SIZE = 50
+# Scaling factor for the next peak
+MEAN_WINDOW_PERCENT = 1.5
