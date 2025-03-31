@@ -21,10 +21,9 @@ CHAR_SIZE_HEIGHT = 8
 
 # Options for usability and control
 
-DO_UI_LERP = True
 ROTARY_BUTTON_DEBOUNCE_MS = 60
 # How many rotations need to be registered to change the selected option
-ROTARY_ROTATION_SENSETIVITY = 4
+ROTARY_ROTATION_SENSETIVITY = 1
 # How long to wait before resetting accumulating options
 ROTARY_ROTATION_RESET_TIMEOUT_MS = 250
 # How long does a long press take, everything below is a short press
@@ -34,8 +33,3 @@ LONG_PRESS_MS = 200
 UI_OPTION_GAP = 6
 UI_LEFT_MARGIN = 4
 UI_TOP_MARGIN = 4
-
-# XXX: the UI transitions are non-linear, so they take some time to execute
-# Modify this as you see fit and test by feel.
-_UI_LERP_RATE = 0.5
-UI_LERP_RATE = log(_UI_LERP_RATE)
