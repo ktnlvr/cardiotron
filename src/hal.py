@@ -90,7 +90,7 @@ class HAL:
             if self.rotary_accumulator < 0:
                 rotary_accumulator *= -1
             self.rotary_accumulator = rotary_accumulator
-    
+
     def rotary_motion_percentage(self):
         """
         Returns a value from 0 to 1, representing how much rotation is done.
@@ -102,7 +102,7 @@ class HAL:
         Resets the state of the rotary knob and returns the accumulated motions.
         """
         if self.rotary_motion_queue:
-            motion = self.rotary_motion_queue 
+            motion = self.rotary_motion_queue
             self.rotary_motion_queue = 0
             return motion
         return 0
@@ -125,7 +125,7 @@ class HAL:
         `True` if the button is currently being pressed, `False` otherwise.
         """
         return self.button_pressed_timer_running
-    
+
     def button(self) -> bool:
         """
         `True` if button was generally pressed, `False` otherwise.
