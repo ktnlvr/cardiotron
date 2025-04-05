@@ -19,6 +19,7 @@ class Machine(HAL):
         self.settings_ui = Ui(
             self, [("Brigtness", s(self.brightness))], s(self.main_menu)
         )
+        self.first_frame = True
 
         self.main_menu_ui = Ui(
             self,
@@ -33,6 +34,7 @@ class Machine(HAL):
     def main_menu(self):
         self.main_menu_ui.tick()
 
+    @HAL.always_redraw
     def toast(self):
         if self.button():
             self.state(self.main_menu)
@@ -54,7 +56,7 @@ class Machine(HAL):
         rotation = self.pull_rotary()
         rotation *= speed
 
-        if rotation:
+        if rotation or self.is_first_frame:
             self.brightness_slider_b = min(
                 0xFF, max(self.brightness_slider_b + rotation, 0)
             )
@@ -78,3 +80,5 @@ class Machine(HAL):
             CHAR_SIZE_HEIGHT - 1,
             1,
         )
+
+        self.request_redraw()

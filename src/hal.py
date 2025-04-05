@@ -46,6 +46,8 @@ class HAL:
 
         self.rotary_reset_timer_ms = 0
 
+        self.is_first_frame = True
+
     def _rotary_knob_press(self, _):
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_ms():
             return
@@ -81,7 +83,7 @@ class HAL:
         increment |= threshold_hit
 
         if increment:
-            self.rotary_motion_queue = -1 if self.rotary_accumulator > 0 else 1
+            self.rotary_motion_queue += -1 if self.rotary_accumulator > 0 else 1
 
             rotary_accumulator = self.rotary_accumulator
             rotary_accumulator = (
@@ -162,8 +164,12 @@ class HAL:
                 self.rotary_accumulator = 0
                 self.rotary_reset_timer_ms = 0
 
-        self._state()
-        self.display.show()
+        running_state = self._state
+        running_state()
+
+        # If the state was changed it will be the new state's
+        # first frame, otherwise we reset it
+        self.is_first_frame = not (self._state is running_state)
 
         # TODO: just for testing purposes
         # this is where the cat will be
@@ -174,3 +180,15 @@ class HAL:
             DISPLAY_HEIGHT,
             1,
         )
+
+    @staticmethod
+    def always_redraw(f):
+        def wrapper(self):
+            ret = f(self)
+            self.display.show()
+            return ret
+
+        return wrapper
+
+    def request_redraw(self):
+        self.display.show()

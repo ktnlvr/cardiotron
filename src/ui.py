@@ -5,7 +5,6 @@ from constants import (
     CHAR_SIZE_HEIGHT,
     UI_MARGIN,
 )
-from math import exp
 
 
 class Ui:
@@ -16,6 +15,7 @@ class Ui:
         self.fallback = fallback
 
         self.selected_option = 0
+        self.first_frame = True
 
     @property
     def display(self):
@@ -27,12 +27,22 @@ class Ui:
                 self.fallback()
                 return
 
-        self.display.fill(0)
-
-        if self.selected_option:
-            self.selected_option %= len(self.options)
+        if self.hal.button_short():
+            self.options[self.selected_option][1]()
+            return
 
         rotary_motion = self.hal.pull_rotary()
+
+        if not rotary_motion and not self.hal.is_first_frame:
+            return
+
+        self.is_first_frame = False
+
+        self.selected_option = (
+            len(self.options) + self.selected_option + rotary_motion
+        ) % len(self.options)
+
+        self.display.fill(0)
 
         max_chars_in_option = max(map(lambda o: len(o[0]), self.options))
         option_label_width = (max_chars_in_option + 1) * CHAR_SIZE_WIDTH
@@ -59,10 +69,4 @@ class Ui:
                 color,
             )
 
-        if rotary_motion:
-            self.selected_option = (
-                len(self.options) + self.selected_option + rotary_motion
-            ) % len(self.options)
-
-        if self.hal.button_short():
-            self.options[self.selected_option][1]()
+        self.hal.request_redraw()
