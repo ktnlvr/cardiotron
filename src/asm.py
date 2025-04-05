@@ -4,6 +4,7 @@ from constants import (
     UI_MARGIN,
     DISPLAY_WIDTH,
     CHAR_SIZE_HEIGHT,
+    UI_OPTION_GAP,
 )
 
 
@@ -82,7 +83,14 @@ class Machine(HAL):
             UI_MARGIN + 1,
             UI_MARGIN + 1,
             width_filled_in,
-            CHAR_SIZE_HEIGHT - 1,
+            CHAR_SIZE_HEIGHT - 2,
+            1,
+        )
+
+        self.display.text(
+            "Rotate the knob",
+            UI_MARGIN,
+            UI_MARGIN + CHAR_SIZE_HEIGHT + UI_OPTION_GAP,
             1,
         )
 
