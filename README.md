@@ -6,6 +6,11 @@ Embedded heart sensor with supporting cloud infrastructure. Now with support for
 
 - Not a single `sleep_ms` in the entire codebase. Interrupts all the way down.
 
+## Abbreviations/Notation
+
+- Some stuff is prefixed with `_`, that largely means "internal" and you shouldn't be touching those for writing "business logic."
+- Some stuff ends in a `_b`, `_ns` or `_ms`. That specifies that units, for instance `_ns` is nanoseconds and `_b` is byte. That is useful for conversions and understanding what range a variable can be in (i.e. bytes are `0..255`).
+
 ## Setup 
 
 ### Running the Pico
