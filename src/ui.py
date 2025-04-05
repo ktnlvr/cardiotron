@@ -1,17 +1,20 @@
 from constants import (
     UI_OPTION_GAP,
     CHAR_SIZE_WIDTH,
-    UI_LEFT_MARGIN,
+    UI_MARGIN,
     CHAR_SIZE_HEIGHT,
-    UI_TOP_MARGIN,
+    UI_MARGIN,
 )
 from math import exp
 
 
 class Ui:
-    def __init__(self, hal, options=[]):
+    def __init__(self, hal, options=[], fallback=None):
         self.hal = hal
+
         self.options = options
+        self.fallback = fallback
+
         self.selected_option = 0
 
     @property
@@ -19,6 +22,11 @@ class Ui:
         return self.hal.display
 
     def tick(self):
+        if self.hal.button_long():
+            if self.fallback:
+                self.fallback()
+                return
+
         self.display.fill(0)
 
         if self.selected_option:
@@ -30,8 +38,8 @@ class Ui:
         option_label_width = (max_chars_in_option + 1) * CHAR_SIZE_WIDTH
 
         for i, (name, _) in enumerate(self.options):
-            text_x = UI_LEFT_MARGIN
-            text_y = UI_TOP_MARGIN + i * (CHAR_SIZE_HEIGHT + UI_OPTION_GAP)
+            text_x = UI_MARGIN
+            text_y = UI_MARGIN + i * (CHAR_SIZE_HEIGHT + UI_OPTION_GAP)
 
             color = 1
             if i == self.selected_option:
