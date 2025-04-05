@@ -48,6 +48,9 @@ class HAL:
 
         self.is_first_frame = True
 
+        self.is_display_inverted = False
+        self.is_display_flipped = False
+
     def _rotary_knob_press(self, _):
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_ms():
             return
@@ -192,3 +195,7 @@ class HAL:
 
     def request_redraw(self):
         self.display.show()
+
+    def invert_display(self):
+        self.is_display_inverted = not self.is_display_inverted
+        self.display.invert(self.is_display_inverted)

@@ -17,7 +17,12 @@ class Machine(HAL):
 
         self.brightness_slider_b = 0xFF
         self.settings_ui = Ui(
-            self, [("Brigtness", s(self.brightness))], s(self.main_menu)
+            self,
+            [
+                ("Brigtness", s(self.brightness)),
+                ("Invert", self.invert_display),
+            ],
+            s(self.main_menu),
         )
         self.first_frame = True
 
