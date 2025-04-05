@@ -47,7 +47,7 @@ TIMESTAMP_DIFFERENCE_SENSOR = 0.004
 # Alpha value for the low pass filter
 ALPHA = 0.5
 # Samples per pixel
-SAMPLES_PER_PIXEL = 5
+SAMPLES_PER_PIXEL = 3
 # Pin number of the heart beat sensor
 PIN_SENSOR = 27
 # Total samples to take in account when calculating heart beat measurements
@@ -57,3 +57,5 @@ SAMPLE_SIZE = 200
 MEAN_WINDOW_SIZE = 50
 # Scaling factor for the next peak
 MEAN_WINDOW_PERCENT = 1.5
+MIN_PEAK_INTERVAL = 600
+MAX_PEAK_INTERVAL = 1000
