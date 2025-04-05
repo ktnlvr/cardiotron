@@ -81,7 +81,7 @@ class HAL:
         increment |= threshold_hit
 
         if increment:
-            self.rotary_motion_queue = 1 if self.rotary_accumulator > 0 else -1
+            self.rotary_motion_queue = -1 if self.rotary_accumulator > 0 else 1
 
             rotary_accumulator = self.rotary_accumulator
             rotary_accumulator = (
