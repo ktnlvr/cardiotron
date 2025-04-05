@@ -20,7 +20,7 @@ class Machine(HAL):
         self.settings_ui = Ui(
             self,
             [
-                ("Brigtness", s(self.brightness)),
+                ("Brightness", s(self.brightness)),
                 ("Invert", self.invert_display),
             ],
             s(self.main_menu),
