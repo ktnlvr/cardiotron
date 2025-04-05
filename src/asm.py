@@ -5,7 +5,14 @@ from constants import (
     DISPLAY_WIDTH,
     CHAR_SIZE_HEIGHT,
     UI_OPTION_GAP,
+    UI_CLOCK_HOUR_ARROW_LENGTH_PX,
+    UI_CLOCK_MINUTE_ARROW_LENGTH_PX,
+    UI_CLOCK_SECOND_ARROW_LENGTH_PX,
+    DISPLAY_WIDTH,
+    DISPLAY_HEIGHT,
 )
+from time import localtime
+from math import tau, sin, cos
 
 
 class Machine(HAL):
@@ -22,6 +29,7 @@ class Machine(HAL):
             [
                 ("Brightness", s(self.brightness)),
                 ("Invert", self.invert_display),
+                ("Clock", s(self.clock)),
             ],
             s(self.main_menu),
         )
@@ -95,3 +103,73 @@ class Machine(HAL):
         )
 
         self.request_redraw()
+
+    @HAL.always_redraw
+    def clock(self):
+        rotary = 0
+
+        if not self.button_held():
+            rotary = self.pull_rotary()
+
+        if self.button_long():
+            self.state(self.settings)
+            return
+
+        time_tuple = list(localtime())
+        _, _, _, h, m, s, *_ = time_tuple
+
+        self.display.fill(0)
+
+        self.display.text(f"{h:0>2}:{m:0>2}:{s:0>2}", UI_MARGIN, UI_MARGIN)
+
+        # 3 2-digit numbers and 2 colons inbetween
+        text_width = CHAR_SIZE_HEIGHT * (3 * 2 + 2)
+        clock_width = DISPLAY_WIDTH - text_width
+        clock_center_x = text_width + clock_width // 2
+        clock_center_y = DISPLAY_HEIGHT // 2
+
+        h_angle = tau * h / 24
+        m_angle = tau * m / 60
+        s_angle = tau * s / 60
+
+        arrows = [
+            (UI_CLOCK_HOUR_ARROW_LENGTH_PX, h_angle),
+            (UI_CLOCK_MINUTE_ARROW_LENGTH_PX, m_angle),
+            (UI_CLOCK_SECOND_ARROW_LENGTH_PX, s_angle),
+        ]
+
+        CLOCK_00_OFFSET = -tau / 4
+
+        clock_radius = max(map(lambda t: t[0], arrows))
+        steps = 32
+        for i in range(0, steps):
+            step = tau / steps
+            angle = i * step + CLOCK_00_OFFSET
+
+            x1 = int(round(clock_radius * cos(angle)))
+            y1 = int(round(clock_radius * sin(angle)))
+
+            y2 = int(round(clock_radius * sin(angle + step)))
+            x2 = int(round(clock_radius * cos(angle + step)))
+
+            self.display.line(
+                clock_center_x + x1,
+                clock_center_y + y1,
+                clock_center_x + x2,
+                clock_center_y + y2,
+                1,
+            )
+
+        for length, angle in arrows:
+            angle += CLOCK_00_OFFSET
+
+            y = int(round(length * sin(angle)))
+            x = int(round(length * cos(angle)))
+
+            self.display.line(
+                clock_center_x,
+                clock_center_y,
+                clock_center_x + x,
+                clock_center_y + y,
+                1,
+            )
