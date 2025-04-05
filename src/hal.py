@@ -18,6 +18,7 @@ from constants import (
     ROTARY_ROTATION_SENSETIVITY,
 )
 import ssd1306
+import os
 
 
 # Hardware abstraction layer over the Pico W
@@ -121,6 +122,7 @@ class HAL:
             if self._state is new_state:
                 return
             gc_collect()
+            self.flush_files()
             self.onboard_led.toggle()
             self._state = new_state
         return self._state
@@ -199,3 +201,8 @@ class HAL:
     def invert_display(self):
         self.is_display_inverted = not self.is_display_inverted
         self.display.invert(self.is_display_inverted)
+
+    @staticmethod
+    def flush_files():
+        # Micropython-specific function
+        os.sync()  # type: ignore
