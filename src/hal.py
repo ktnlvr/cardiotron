@@ -174,16 +174,6 @@ class HAL:
         # first frame, otherwise we reset it
         self.is_first_frame = not (self._state is running_state)
 
-        # TODO: just for testing purposes
-        # this is where the cat will be
-        self.display.fill_rect(
-            DISPLAY_WIDTH - CAT_SIZE_WIDTH,
-            DISPLAY_HEIGHT - CAT_SIZE_HEIGTH,
-            DISPLAY_WIDTH,
-            DISPLAY_HEIGHT,
-            1,
-        )
-
     @staticmethod
     def always_redraw(f):
         def wrapper(self):
@@ -194,6 +184,16 @@ class HAL:
         return wrapper
 
     def request_redraw(self):
+        # TODO: just for testing purposes
+        # this is where the cat will be
+        self.display.fill_rect(
+            DISPLAY_WIDTH - CAT_SIZE_WIDTH,
+            DISPLAY_HEIGHT - CAT_SIZE_HEIGTH,
+            DISPLAY_WIDTH,
+            DISPLAY_HEIGHT,
+            1,
+        )
+
         self.display.show()
 
     def invert_display(self):
