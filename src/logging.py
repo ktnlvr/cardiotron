@@ -1,5 +1,6 @@
 import os
 from errno import EEXIST
+from utils import localtime_string
 
 active_log = None
 log_number = 0
@@ -17,18 +18,17 @@ def init_logs():
             raise
 
     logfiles = os.listdir("logs")
-    for file in logfiles:
-        new_log_number = file[len("log-") : -len(".txt")]
-        log_number = max(log_number, int(new_log_number)) + 1
-    print(f"{log_number} past logs found")
-    active_log = open(f"logs/log-{log_number}.txt", "a")
+    print(f"{len(logfiles)} past logs found!")
+
+    localtime = localtime_string()
+    log_name = f"log-{localtime}.txt"
+    active_log = open(f"logs/{log_name}", "a+")
 
 
 def log(*args):
     if not active_log:
         init_logs()
-    string = " ".join(map(str, args))
+    string = f"[{localtime_string()}] " + " ".join(map(str, args))
     print(string)
-
     active_log.write(string.encode("utf-8"))  # type: ignore
     active_log.flush()  # type: ignore
