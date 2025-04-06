@@ -131,7 +131,7 @@ class Machine(HAL):
         clock_center_x = text_width + clock_width // 2
         clock_center_y = DISPLAY_HEIGHT // 2
 
-        h_angle = tau * h / 24
+        h_angle = tau * (h % 12) / 12
         m_angle = tau * m / 60
         s_angle = tau * s / 60
 
@@ -152,8 +152,8 @@ class Machine(HAL):
             x1 = int(round(clock_radius * cos(angle)))
             y1 = int(round(clock_radius * sin(angle)))
 
-            y2 = int(round(clock_radius * sin(angle + step)))
             x2 = int(round(clock_radius * cos(angle + step)))
+            y2 = int(round(clock_radius * sin(angle + step)))
 
             self.display.line(
                 clock_center_x + x1,
