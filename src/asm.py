@@ -2,14 +2,14 @@ from hal import HAL
 from ui import Ui
 from constants import (
     UI_MARGIN,
-    DISPLAY_WIDTH,
-    CHAR_SIZE_HEIGHT,
+    DISPLAY_WIDTH_PX,
+    CHAR_SIZE_HEIGHT_PX,
     UI_OPTION_GAP,
     UI_CLOCK_HOUR_ARROW_LENGTH_PX,
     UI_CLOCK_MINUTE_ARROW_LENGTH_PX,
     UI_CLOCK_SECOND_ARROW_LENGTH_PX,
-    DISPLAY_WIDTH,
-    DISPLAY_HEIGHT,
+    DISPLAY_WIDTH_PX,
+    DISPLAY_HEIGHT_PX,
 )
 from time import localtime
 from math import tau, sin, cos
@@ -81,25 +81,25 @@ class Machine(HAL):
         # rectangles outline being 1. It can't really be controlled
         # and are just direct pixel offsets. Open to suggestions.
 
-        width = DISPLAY_WIDTH - 2 * UI_MARGIN
+        width = DISPLAY_WIDTH_PX - 2 * UI_MARGIN
 
         # Since 0 width doesn't mean that the display is turned off, displaying just 1
         # pixel of brightness would clarify that the minimum is actually not 0
         width_filled_in = max(int((width - 2) * (self.brightness_slider_b / 0xFF)), 1)
 
-        self.display.rect(UI_MARGIN, UI_MARGIN, width, CHAR_SIZE_HEIGHT, 1)
+        self.display.rect(UI_MARGIN, UI_MARGIN, width, CHAR_SIZE_HEIGHT_PX, 1)
         self.display.fill_rect(
             UI_MARGIN + 1,
             UI_MARGIN + 1,
             width_filled_in,
-            CHAR_SIZE_HEIGHT - 2,
+            CHAR_SIZE_HEIGHT_PX - 2,
             1,
         )
 
         self.display.text(
             "Rotate the knob",
             UI_MARGIN,
-            UI_MARGIN + CHAR_SIZE_HEIGHT + UI_OPTION_GAP,
+            UI_MARGIN + CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP,
             1,
         )
 
@@ -126,10 +126,10 @@ class Machine(HAL):
         self.display.text(f"{h:0>2}:{m:0>2}:{s:0>2}", UI_MARGIN, UI_MARGIN)
 
         # 3 2-digit numbers and 2 colons inbetween
-        text_width = CHAR_SIZE_HEIGHT * (3 * 2 + 2)
-        clock_width = DISPLAY_WIDTH - text_width
+        text_width = CHAR_SIZE_HEIGHT_PX * (3 * 2 + 2)
+        clock_width = DISPLAY_WIDTH_PX - text_width
         clock_center_x = text_width + clock_width // 2
-        clock_center_y = DISPLAY_HEIGHT // 2
+        clock_center_y = DISPLAY_HEIGHT_PX // 2
 
         h_angle = tau * (h % 12) / 12
         m_angle = tau * m / 60

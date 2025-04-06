@@ -4,10 +4,10 @@ from gc import collect as gc_collect
 from constants import (
     ROTARY_BUTTON_DEBOUNCE_MS,
     LONG_PRESS_MS,
-    DISPLAY_WIDTH,
-    DISPLAY_HEIGHT,
-    CAT_SIZE_WIDTH,
-    CAT_SIZE_HEIGTH,
+    DISPLAY_WIDTH_PX,
+    DISPLAY_HEIGHT_PX,
+    CAT_SIZE_WIDTH_PX,
+    CAT_SIZE_HEIGTH_PX,
     PIN_ROTARY_A,
     PIN_SIGNAL_LED,
     PIN_ROTARY_B,
@@ -189,10 +189,10 @@ class HAL:
         # TODO: just for testing purposes
         # this is where the cat will be
         self.display.fill_rect(
-            DISPLAY_WIDTH - CAT_SIZE_WIDTH,
-            DISPLAY_HEIGHT - CAT_SIZE_HEIGTH,
-            DISPLAY_WIDTH,
-            DISPLAY_HEIGHT,
+            DISPLAY_WIDTH_PX - CAT_SIZE_WIDTH_PX,
+            DISPLAY_HEIGHT_PX - CAT_SIZE_HEIGTH_PX,
+            DISPLAY_WIDTH_PX,
+            DISPLAY_HEIGHT_PX,
             1,
         )
 

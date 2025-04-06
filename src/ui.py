@@ -1,8 +1,8 @@
 from constants import (
     UI_OPTION_GAP,
-    CHAR_SIZE_WIDTH,
+    CHAR_SIZE_WIDTH_PX,
     UI_MARGIN,
-    CHAR_SIZE_HEIGHT,
+    CHAR_SIZE_HEIGHT_PX,
     UI_MARGIN,
 )
 
@@ -45,11 +45,11 @@ class Ui:
         self.display.fill(0)
 
         max_chars_in_option = max(map(lambda o: len(o[0]), self.options))
-        option_label_width = (max_chars_in_option + 1) * CHAR_SIZE_WIDTH
+        option_label_width = (max_chars_in_option + 1) * CHAR_SIZE_WIDTH_PX
 
         for i, (name, _) in enumerate(self.options):
             text_x = UI_MARGIN
-            text_y = UI_MARGIN + i * (CHAR_SIZE_HEIGHT + UI_OPTION_GAP)
+            text_y = UI_MARGIN + i * (CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP)
 
             color = 1
             if i == self.selected_option:
@@ -57,7 +57,7 @@ class Ui:
                     text_x,
                     text_y - UI_OPTION_GAP // 2,
                     option_label_width,
-                    CHAR_SIZE_HEIGHT + UI_OPTION_GAP // 2,
+                    CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP // 2,
                     color,
                 )
                 color ^= 1
