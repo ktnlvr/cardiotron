@@ -61,7 +61,7 @@ class Machine(HAL):
         self.settings_ui.tick()
 
     def brightness(self):
-        if self.button_long():
+        if self.button():
             self.state(self.settings)
             return
 
