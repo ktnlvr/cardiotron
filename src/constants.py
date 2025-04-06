@@ -21,7 +21,7 @@ CHAR_SIZE_HEIGHT = 8
 
 # Options for usability and control
 
-ROTARY_BUTTON_DEBOUNCE_MS = 60
+ROTARY_BUTTON_DEBOUNCE_MS = 20
 # How many rotations need to be registered to change the selected option
 ROTARY_ROTATION_SENSETIVITY = 1
 # How long to wait before resetting accumulating options
