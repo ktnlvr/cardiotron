@@ -34,6 +34,7 @@ class Machine(HAL):
             s(self.main_menu),
         )
         self.first_frame = True
+        self.previous_clock_second = 0
 
         self.main_menu_ui = Ui(
             self,
@@ -106,10 +107,8 @@ class Machine(HAL):
 
     @HAL.always_redraw
     def clock(self):
-        rotary = 0
-
-        if not self.button_held():
-            rotary = self.pull_rotary()
+        if self.is_first_frame:
+            self.previous_clock_second = 0
 
         if self.button_long():
             self.state(self.settings)
@@ -117,6 +116,10 @@ class Machine(HAL):
 
         time_tuple = list(localtime())
         _, _, _, h, m, s, *_ = time_tuple
+
+        if s != self.previous_clock_second:
+            self.onboard_led.toggle()
+            self.previous_clock_second = s
 
         self.display.fill(0)
 
