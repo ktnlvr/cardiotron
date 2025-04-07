@@ -45,9 +45,9 @@ class Machine(HAL):
             (value - min_value) / (max_value - min_value) * (DISPLAY_HEIGHT - 1)
         )
 
-    #samples stores the values to show on screen
-    #mean_window stores the smoothed out values
-    #peak_diffs would store the difference between the peaks
+    # samples stores the values to show on screen
+    # mean_window stores the smoothed out values
+    # peak_diffs would store the difference between the peaks
     def heart_rate(self):
         prev_y = DISPLAY_HEIGHT - 1
         samples_on_screen = []
@@ -61,13 +61,17 @@ class Machine(HAL):
                 max_window = max(mean_window)
                 corrected_mean = MEAN_WINDOW_PERCENT * (mean - min_window) + min_window
             new_samples = []
-            new_samples = [self.sensor_pin_adc.read_u16() for _ in range(SAMPLES_PER_PIXEL)]
+            new_samples = [
+                self.sensor_pin_adc.read_u16() for _ in range(SAMPLES_PER_PIXEL)
+            ]
             filtered_sample = sum(new_samples) / len(new_samples)
             self.samples.append(filtered_sample)
             if len(self.samples) > SAMPLE_SIZE:
                 self.samples = self.samples[-SAMPLE_SIZE:]
             if self.samples:
-                filtered_sample = self.low_pass_filter(self.samples[-1], filtered_sample)
+                filtered_sample = self.low_pass_filter(
+                    self.samples[-1], filtered_sample
+                )
             mean_window.append(filtered_sample)
             if len(mean_window) > SAMPLE_SIZE:
                 mean_window = mean_window[-SAMPLE_SIZE:]
@@ -79,10 +83,20 @@ class Machine(HAL):
                 if current > next and current > prev and current > corrected_mean:
                     if self.last_peak is not None:
                         peak_dif = time.ticks_diff(current_time, self.last_peak)
-                        if peak_dif >= MIN_PEAK_INTERVAL and peak_dif <= MAX_PEAK_INTERVAL:
-                            print("PEAK DETECTED")
-                            print(f"The current heart rate is {60000 / mean_peak if mean_peak != 0 else 0}")
+                        if (
+                            peak_dif >= MIN_PEAK_INTERVAL
+                            and peak_dif <= MAX_PEAK_INTERVAL
+                        ):
+                            mean_peak = (
+                                sum(self.peak_diffs) / len(self.peak_diffs)
+                                if len(self.peak_diffs) != 0
+                                else 0
+                            )
                             self.peak_diffs.append(peak_dif)
+                            print("PEAK DETECTED")
+                            print(
+                                f"The current heart rate is {60000 / mean_peak if mean_peak != 0 else 0}"
+                            )
                             if len(self.peak_diffs) > SAMPLE_SIZE:
                                 self.peak_diffs = self.peak_diffs[-SAMPLE_SIZE:]
                     self.last_peak = current_time
@@ -109,8 +123,9 @@ class Machine(HAL):
                 prev_x, prev_y = screen_x, screen_y
             self.display.show()
             if len(self.samples) >= 2:
-                prev_y = self.min_max_scaling(max_value, min_value, samples_on_screen[1])
-            mean_peak = sum(self.peak_diffs) / len(self.peak_diffs) if len(self.peak_diffs) != 0 else 0
+                prev_y = self.min_max_scaling(
+                    max_value, min_value, samples_on_screen[1]
+                )
 
     def toast(self):
         if self.button():
