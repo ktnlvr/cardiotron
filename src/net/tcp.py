@@ -7,7 +7,6 @@ import io
 import select
 import socket
 from collections import namedtuple
-from typing import Dict, List, Optional, NamedTuple
 
 from net import defaulter_dict
 from net.server import connection
@@ -17,18 +16,15 @@ class TCP:
     """TCP stream handler"""
     MSS = 536  # TCP/IP Maximum Segment Size
     
-    class Writer(NamedTuple):
-        data: io.BytesIO
-        buff: bytearray
-        buffmv: memoryview
-        range: List[int]
+    class Writer(namedtuple('Writer', ['data', 'buff', 'buffmv', 'range'])):
+        pass
 
-    def __init__(self, poller: select.poll):
+    def __init__(self, poller):
         self._poller = poller
-        self._reads: Dict[int, bytes] = {}  # Store read data by socket id
-        self._writes: Dict[int, List['TCP.Writer']] = defaulter_dict()  # Store write data by socket id
+        self._reads = {}  # Store read data by socket id
+        self._writes = defaulter_dict()  # Store write data by socket id
 
-    def read(self, sock: socket.socket) -> bytes:
+    def read(self, sock):
         """Read data from socket"""
         sid = id(sock)
         try:
@@ -39,17 +35,16 @@ class TCP:
         self._reads[sid] = request
         return request
 
-    def prepare(self, sock: socket.socket, data: list):
+    def prepare(self, sock, data):
         """Prepare data for transmission"""
         buff = bytearray(b"00" * TCP.MSS)
-        writers = self._writes.get(id(sock), lambda x: [])
-        if writers is not None:
-            writers.append(
-                TCP.Writer(io.BytesIO(b"".join(data)), buff, memoryview(buff), [0, 0])
-            )
-            self._poller.modify(sock, select.POLLOUT)
+        writers = self._writes.get(id(sock), [])
+        writers.append(
+            TCP.Writer(io.BytesIO(b"".join(data)), buff, memoryview(buff), [0, 0])
+        )
+        self._poller.modify(sock, select.POLLOUT)
 
-    def write(self, sock: socket.socket) -> bool:
+    def write(self, sock):
         """Write next packet, return True if all packets written"""
         try:
             # Check if socket is still valid by trying to read from it
@@ -58,7 +53,7 @@ class TCP:
         except:
             pass
 
-        writers = self._writes.get(id(sock))
+        writers = self._writes.get(id(sock), [])
         if not writers:
             return True
         curr = writers[0]
@@ -85,7 +80,7 @@ class TCP:
             return True
         return False
 
-    def clear(self, sock: socket.socket):
+    def clear(self, sock):
         """Clear stored data for socket"""
         sid = id(sock)
         if sid in self._reads:
@@ -94,7 +89,7 @@ class TCP:
             del self._writes[sid]
         gc.collect()
 
-    def end(self, sock: socket.socket):
+    def end(self, sock):
         """Close socket and clean up"""
         try:
             while not self.write(sock):

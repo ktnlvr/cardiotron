@@ -32,3 +32,8 @@ def log(*args):
     print(string)
     active_log.write(string.encode("utf-8"))  # type: ignore
     active_log.flush()  # type: ignore
+
+
+def eth_log(*args):
+    string = f"[{localtime_string()}] " + " ".join(map(str, args))
+    print(string)
