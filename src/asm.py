@@ -15,6 +15,7 @@ from constants import (
 )
 import time
 from time import ticks_ms
+from bench import span_begin, span_end
 
 from heart import low_pass_filter, min_max_scaling, HeartMeasurements
 
@@ -50,11 +51,17 @@ class Machine(HAL):
         while True:
             self.display.fill(0)
 
+            span_begin("heart_processing")
+
             measurements.sample(self.sensor_pin_adc)
             measurements.detect_peak()
 
+            span_begin("reset")
             if time.ticks_diff(ticks_ms(), measurements.last_peak_ms) > 2000:
                 measurements.reset()
+            span_begin("reset")
+            
+            span_end("heart_processing")
             
             samples_on_screen = measurements.samples[-DISPLAY_WIDTH:]
 
