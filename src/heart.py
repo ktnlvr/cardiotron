@@ -53,7 +53,7 @@ def detect_peaks(
                     sum(peak_diffs_ms) / len(peak_diffs_ms) if peak_diffs_ms else 0
                 )
                 peak_diffs_ms.append(peak_diff)
-                # print(f"{60000 / mean_peak if mean_peak else 0:.2f}")
+                print(f"{60000 / mean_peak if mean_peak else 0:.2f}")
                 if len(peak_diffs_ms) > PPI_SIZE:
                     peak_diffs_ms = peak_diffs_ms[-PPI_SIZE:]
         obj.last_peak_ms = current_time_ms

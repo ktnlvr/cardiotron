@@ -21,6 +21,7 @@ from heart import (
     detect_peaks,
     draw_graph,
 )
+from bench import span_begin, span_end
 
 
 class Machine(HAL):
@@ -51,7 +52,7 @@ class Machine(HAL):
 
         while True:
             self.display.fill(0)
-            start = time.time_ns()
+            # span_begin("GG")
             mean = sum(mean_window) / len(mean_window) if len(mean_window) else 0
             corrected_mean = compute_corrected_mean(mean_window, mean)
 
@@ -76,8 +77,8 @@ class Machine(HAL):
             if time.ticks_diff(current_time, self.last_peak_ms) > 5000:
                 self.peak_diffs_ms = []
                 heart_rate = 0
+            # span_end("GG")
 
-            print(time.time_ns() - start)
             samples_on_screen = (
                 self.samples[-DISPLAY_WIDTH:]
                 if len(self.samples) > DISPLAY_WIDTH
