@@ -60,9 +60,9 @@ class Machine(HAL):
             if time.ticks_diff(ticks_ms(), measurements.last_peak_ms) > 2000:
                 measurements.reset()
             span_begin("reset")
-            
+
             span_end("heart_processing")
-            
+
             samples_on_screen = measurements.samples[-DISPLAY_WIDTH:]
 
             max_value = max(samples_on_screen)
@@ -79,9 +79,7 @@ class Machine(HAL):
                 prev_x, prev_y = screen_x, screen_y
             self.display.show()
             if len(measurements.samples) >= 2:
-                prev_y = min_max_scaling(
-                    max_value, min_value, samples_on_screen[1]
-                )
+                prev_y = min_max_scaling(max_value, min_value, samples_on_screen[1])
 
     def toast(self):
         if self.button():
