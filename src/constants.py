@@ -39,7 +39,7 @@ _UI_LERP_RATE = 0.5
 UI_LERP_RATE = log(_UI_LERP_RATE)
 
 # The sample rate of the heart beat sensor (in Hz)
-SAMPLE_RATE = 25
+SAMPLE_RATE = 15
 # Time difference between each sample taken(in ms)
 TIMESTAMP_DIFFERENCE_SENSOR = 0.004
 # Alpha value for the low pass filter

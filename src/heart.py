@@ -40,6 +40,7 @@ def detect_peaks(
     peak_diffs_ms: list[float],
     obj: Machine,
 ):
+    is_peak = False
     if (
         ddy < 0
         and sample > corrected_mean
@@ -53,10 +54,11 @@ def detect_peaks(
                 )
                 peak_diffs_ms.append(peak_diff)
                 obj.heart_rate = int(60000 / mean_peak if mean_peak else 0)
+                is_peak = True
                 if len(peak_diffs_ms) > PPI_SIZE:
                     peak_diffs_ms = peak_diffs_ms[-PPI_SIZE:]
         obj.last_peak_ms = current_time_ms
-    return obj.heart_rate
+    return is_peak
 
 
 def draw_graph(display, samples_on_screen, prev_y):

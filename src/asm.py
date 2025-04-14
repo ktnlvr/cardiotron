@@ -34,7 +34,6 @@ from constants import (
 from time import localtime
 from math import tau, sin, cos
 from ringbuffer import Ringbuffer
-from fifo import Fifo
 from machine import Timer
 
 
@@ -76,7 +75,7 @@ class Machine(HAL):
         self.heart_rate_screen_samples = Ringbuffer(SAMPLES_ON_SCREEN_SIZE, "f")
         self.filtered_samples = Ringbuffer(SAMPLE_SIZE, "f")
 
-        self.heart_rate_samples = Fifo(HEART_SAMPLES_BUFFER_SIZE, "H")
+        self.heart_rate_samples = Ringbuffer(HEART_SAMPLES_BUFFER_SIZE, "H")
         self.heart_rate_sample_timer = Timer()
 
         self.last_peak_ms = None
@@ -96,7 +95,7 @@ class Machine(HAL):
         if active:
             self.heart_rate_sample_timer.init(
                 period=round(1000 / SAMPLE_RATE),
-                callback=lambda _: self.heart_rate_samples.put(
+                callback=lambda _: self.heart_rate_samples.append(
                     self.sensor_pin_adc.read_u16()
                 ),
             )
@@ -105,6 +104,7 @@ class Machine(HAL):
 
     def measure_heart_rate(self):
         if self.button_long():
+            self.set_heart_sensor_active(False)
             self.state(self.main_menu)
             self._reset_heart_measurements()
             return
@@ -112,10 +112,8 @@ class Machine(HAL):
         if self.is_first_frame:
             self.set_heart_sensor_active(True)
 
-        value = None
-        if self.heart_rate_samples.has_data():
-            value = self.heart_rate_samples.get()
-        else:
+        value = self.heart_rate_samples.get()
+        if not value:
             return
 
         mean_window = self.heart_rate_mean_window
@@ -138,7 +136,7 @@ class Machine(HAL):
         mean_window.append(filtered_sample)
 
         current_time = time.ticks_ms()
-        new_hr = detect_peaks(
+        is_peak = detect_peaks(
             filtered_sample,
             dy - self.last_dy,
             corrected_mean,
@@ -162,6 +160,9 @@ class Machine(HAL):
             self.display.pixel(screen_x, screen_y, 1)
             self.display.line(prev_x, self.heart_rate_graph_y, screen_x, screen_y, 1)
             prev_x, self.heart_rate_graph_y = screen_x, screen_y
+
+        screen_mean = min_max_scaling(ma, mi, corrected_mean)
+        self.display.line(0, screen_mean, SAMPLES_ON_SCREEN_SIZE, screen_mean, 1)
 
         draw_heart_rate_counter(self.display, self.heart_rate)
 

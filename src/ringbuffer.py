@@ -16,7 +16,6 @@ class Ringbuffer:
         return iter(self.data)
 
     def append(self, value):
-        print(value)
         if (self.end + 1) % self.size == self.start:
             self.start = (self.start + 1) % self.size
         self.data[self.end] = value
