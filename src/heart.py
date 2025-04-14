@@ -33,20 +33,16 @@ def compute_corrected_mean(mean_window, mean):
 
 # obj for last_peak_ms
 def detect_peaks(
-    samples: list[float],
+    sample: float,
+    ddy: float,
     corrected_mean: float,
     current_time_ms: float,
     peak_diffs_ms: list[float],
     obj: Machine,
 ):
-    if len(samples) < 3:
-        return obj.heart_rate
-    prev_value, current_value, next_value = samples[-3], samples[-2], samples[-1]
-
     if (
-        current_value > prev_value
-        and current_value > next_value
-        and current_value > corrected_mean
+        ddy < 0
+        and sample > corrected_mean
     ):
         if obj.last_peak_ms is not None:
             peak_diff = time.ticks_diff(current_time_ms, obj.last_peak_ms)

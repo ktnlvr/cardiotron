@@ -32,6 +32,9 @@ from constants import (
 )
 from time import localtime
 from math import tau, sin, cos
+from fifo import Fifo
+from ringbuffer import Ringbuffer
+import gc
 
 
 class Machine(HAL):
@@ -40,10 +43,7 @@ class Machine(HAL):
 
     def __init__(self):
         super().__init__(self.main_menu)
-        self.samples = []
-        self.last_peak_ms = None
-        self.peak_diffs_ms = []
-        self.heart_rate = 0
+
         s = self.go_to_state
 
         self.brightness_slider_b = 0xFF
@@ -69,59 +69,78 @@ class Machine(HAL):
             ],
         )
 
+        self.heart_rate = 0
+        self.heart_rate_graph_y = DISPLAY_HEIGHT_PX - 1
+        self.heart_rate_mean_window = Ringbuffer(MEAN_WINDOW_SIZE, 'f')
+        self.heart_rate_screen_samples = Ringbuffer(SAMPLES_ON_SCREEN_SIZE, 'f')
+        self.filtered_samples = Ringbuffer(SAMPLE_SIZE, 'f')
+        self.last_peak_ms = None
+        self.peak_diffs_ms = []
+        self.heart_rate = 0
+
+        self.last_filtered_sample = 0
+        self.last_dy = 0
+
     def main_menu(self):
         self.main_menu_ui.tick()
 
+    def _reset_heart_measurements(self):
+        self.heart_rate_graph_y = DISPLAY_HEIGHT_PX - 1
+
     @HAL.always_redraw
     def measure_heart_rate(self):
-        prev_y = DISPLAY_HEIGHT_PX - 1
-        samples_on_screen = []
-        mean_window = []
-        self.heart_rate = 0
-        while True:
-            self.display.fill(0)
-            mean = sum(mean_window) / len(mean_window) if len(mean_window) else 0
-            corrected_mean = compute_corrected_mean(mean_window, mean)
+        if self.button_long():
+            self.state(self.main_menu)
+            self._reset_heart_measurements()
+            return
 
-            new_samples = [
-                self.sensor_pin_adc.read_u16()
-                for _ in range(SAMPLES_PROCESSED_PER_COLLECTED)
-            ]
-            filtered_sample = sum(new_samples) / len(new_samples)
-            self.samples.append(filtered_sample)
-            if len(self.samples) > SAMPLE_SIZE:
-                self.samples = self.samples[-SAMPLE_SIZE:]
+        mean_window = self.heart_rate_mean_window
 
-            if self.samples:
-                filtered_sample = low_pass_filter(self.samples[-1], filtered_sample)
-            mean_window.append(filtered_sample)
-            if len(mean_window) > MEAN_WINDOW_SIZE:
-                mean_window = mean_window[-MEAN_WINDOW_SIZE:]
+        self.display.fill(0)
+        mean = sum(mean_window) / len(mean_window) if len(mean_window) else 0
+        corrected_mean = compute_corrected_mean(mean_window, mean)
 
-            current_time = time.ticks_ms()
-            self.heart_rate = detect_peaks(
-                self.samples, corrected_mean, current_time, self.peak_diffs_ms, self
-            )
+        new_samples = [
+            self.sensor_pin_adc.read_u16()
+            for _ in range(SAMPLES_PROCESSED_PER_COLLECTED)
+        ]
 
-            if time.ticks_diff(current_time, self.last_peak_ms) > 3000:
-                self.peak_diffs_ms = []
-                self.heart_rate = 0
+        filtered_sample = sum(new_samples) / len(new_samples)
 
-            samples_on_screen = (
-                self.samples[-SAMPLES_ON_SCREEN_SIZE:]
-                if len(self.samples) > SAMPLES_ON_SCREEN_SIZE
-                else self.samples
-            )
-            draw_graph(self.display, samples_on_screen, prev_y)
-            draw_heart_rate_counter(self.display, self.heart_rate)
-            self.display.show()
+        dy = filtered_sample - self.last_filtered_sample
 
-            if len(self.samples) >= 2:
-                prev_y = min_max_scaling(
-                    max(self.samples[-DISPLAY_WIDTH_PX:]),
-                    min(self.samples[-DISPLAY_WIDTH_PX:]),
-                    samples_on_screen[1],
-                )
+        self.filtered_samples.append(filtered_sample)
+        self.heart_rate_screen_samples.append(filtered_sample)
+
+        if self.filtered_samples:
+            filtered_sample = low_pass_filter(self.last_filtered_sample, filtered_sample)
+        mean_window.append(filtered_sample)
+
+        current_time = time.ticks_ms()
+        new_hr = detect_peaks(
+            filtered_sample, dy - self.last_dy, corrected_mean, current_time, self.peak_diffs_ms, self
+        )
+
+        if time.ticks_diff(current_time, self.last_peak_ms) > 3000:
+            self.peak_diffs_ms = []
+            self.heart_rate = 0
+
+        mi = min(self.heart_rate_screen_samples)
+        ma = max(self.heart_rate_screen_samples)
+
+        prev_x = 0
+        for screen_x in range(len(self.heart_rate_screen_samples)):
+            screen_y = min_max_scaling(ma, mi, self.heart_rate_screen_samples.data[screen_x])
+            self.display.pixel(screen_x, screen_y, 1)
+            self.display.line(prev_x, self.heart_rate_graph_y, screen_x, screen_y, 1)
+            prev_x, self.heart_rate_graph_y = screen_x, screen_y
+
+        draw_heart_rate_counter(self.display, self.heart_rate)
+
+        self.display.show()
+
+        self.last_filtered_sample = filtered_sample
+        self.last_dy = dy
 
     @HAL.always_redraw
     def toast(self):
