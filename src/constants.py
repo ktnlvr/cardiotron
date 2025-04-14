@@ -39,7 +39,7 @@ _UI_LERP_RATE = 0.5
 UI_LERP_RATE = log(_UI_LERP_RATE)
 
 # The sample rate of the heart beat sensor (in Hz)
-SAMPLE_RATE = 250
+SAMPLE_RATE = 25
 # Time difference between each sample taken(in ms)
 TIMESTAMP_DIFFERENCE_SENSOR = 0.004
 # Alpha value for the low pass filter
@@ -56,10 +56,12 @@ MEAN_WINDOW_SIZE = 50
 PPI_SIZE = 50
 # Scaling factor for the next peak
 MEAN_WINDOW_PERCENT = 1.35
-MIN_PEAK_INTERVAL = 600
+MIN_PEAK_INTERVAL = 500
 MAX_PEAK_INTERVAL = 1000
 # Samples to display on screen
 SAMPLES_ON_SCREEN_SIZE = DISPLAY_WIDTH_PX - 40
+# The amount of samples to be collected from the ADC
+HEART_SAMPLES_BUFFER_SIZE = 256
 
 UI_CLOCK_HOUR_ARROW_LENGTH_PX = 10
 UI_CLOCK_MINUTE_ARROW_LENGTH_PX = 16
