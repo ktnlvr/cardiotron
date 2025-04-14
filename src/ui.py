@@ -1,80 +1,63 @@
 from constants import (
     UI_OPTION_GAP,
-    CHAR_SIZE_WIDTH,
-    UI_LEFT_MARGIN,
-    CHAR_SIZE_HEIGHT,
-    UI_TOP_MARGIN,
-    UI_LERP_RATE,
-    DO_UI_LERP,
-    ALPHA,
+    CHAR_SIZE_WIDTH_PX,
+    UI_MARGIN,
+    CHAR_SIZE_HEIGHT_PX,
+    UI_MARGIN,
 )
-from math import exp
-from time import ticks_ms
-
-
-def stable_lerp(x, y, r, dt):
-    return (y - x) * exp(r * dt) + y
 
 
 class Ui:
-    def __init__(self, hal, options=[]):
+    def __init__(self, hal, options=[], fallback=None):
         self.hal = hal
-        self.options = options
-        self.selected_option = 0
-        self.selection_highlight_y = 0
 
-        self.last_time_ms = ticks_ms()
-        self.dt = 0
+        self.options = options
+        self.fallback = fallback
+
+        self.selected_option = 0
+        self.first_frame = True
 
     @property
     def display(self):
         return self.hal.display
 
     def tick(self):
-        time_ms = ticks_ms()
-        self.dt = time_ms - self.last_time_ms
-        self.last_time_ms = time_ms
+        if self.hal.button_long():
+            if self.fallback:
+                self.fallback()
+                return
 
-        self.display.fill(0)
-
-        if self.selected_option:
-            self.selected_option %= len(self.options)
+        if self.hal.button_short():
+            self.options[self.selected_option][1]()
+            return
 
         rotary_motion = self.hal.pull_rotary()
 
-        max_chars_in_option = max(map(lambda o: len(o[0]), self.options))
-        option_label_width = (max_chars_in_option + 1) * CHAR_SIZE_WIDTH
+        if not rotary_motion and not self.hal.is_first_frame:
+            return
 
-        # XXX: kinda ugly, rewrite me?
+        self.is_first_frame = False
+
+        self.selected_option = (
+            len(self.options) + self.selected_option + rotary_motion
+        ) % len(self.options)
+
+        self.display.fill(0)
+
+        max_chars_in_option = max(map(lambda o: len(o[0]), self.options))
+        option_label_width = (max_chars_in_option + 1) * CHAR_SIZE_WIDTH_PX
+
         for i, (name, _) in enumerate(self.options):
-            text_x = UI_LEFT_MARGIN
-            text_y = UI_TOP_MARGIN + i * (CHAR_SIZE_HEIGHT + UI_OPTION_GAP)
+            text_x = UI_MARGIN
+            text_y = UI_MARGIN + i * (CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP)
 
             color = 1
             if i == self.selected_option:
-                selection_highlight_dy = (
-                    UI_OPTION_GAP * self.hal.rotary_motion_percentage()
-                )
-
-                target_selection_y = (
-                    text_y + selection_highlight_dy - UI_OPTION_GAP // 2
-                )
-
-                if DO_UI_LERP:
-                    self.selection_highlight_y = stable_lerp(
-                        self.selection_highlight_y,
-                        target_selection_y,
-                        UI_LERP_RATE,
-                        self.dt,
-                    )
-                else:
-                    self.selection_highlight_y = target_selection_y
-
                 self.display.fill_rect(
                     text_x,
-                    round(self.selection_highlight_y),
+                    text_y - UI_OPTION_GAP // 2,
                     option_label_width,
-                    CHAR_SIZE_HEIGHT + UI_OPTION_GAP,
+                    CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP // 2,
                     color,
                 )
                 color ^= 1
@@ -86,10 +69,4 @@ class Ui:
                 color,
             )
 
-        if rotary_motion:
-            self.selected_option = (
-                len(self.options) + self.selected_option + rotary_motion
-            ) % len(self.options)
-
-        if self.hal.button_short():
-            self.options[self.selected_option][1]()
+        self.hal.request_redraw()

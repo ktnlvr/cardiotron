@@ -12,19 +12,18 @@ PIN_I2C_CLOCK = 15
 
 # Options tat are specific to the modules being used
 
-DISPLAY_WIDTH = 128
-DISPLAY_HEIGHT = 64
-CAT_SIZE_WIDTH = 32
-CAT_SIZE_HEIGTH = 32
-CHAR_SIZE_WIDTH = 8
-CHAR_SIZE_HEIGHT = 8
+DISPLAY_WIDTH_PX = 128
+DISPLAY_HEIGHT_PX = 64
+CAT_SIZE_WIDTH_PX = 32
+CAT_SIZE_HEIGTH_PX = 32
+CHAR_SIZE_WIDTH_PX = 8
+CHAR_SIZE_HEIGHT_PX = 8
 
 # Options for usability and control
 
-DO_UI_LERP = True
-ROTARY_BUTTON_DEBOUNCE_MS = 60
+ROTARY_BUTTON_DEBOUNCE_MS = 20
 # How many rotations need to be registered to change the selected option
-ROTARY_ROTATION_SENSETIVITY = 4
+ROTARY_ROTATION_SENSETIVITY = 1
 # How long to wait before resetting accumulating options
 ROTARY_ROTATION_RESET_TIMEOUT_MS = 250
 # How long does a long press take, everything below is a short press
@@ -32,8 +31,7 @@ LONG_PRESS_MS = 200
 
 # The free space between the options in a UI menu
 UI_OPTION_GAP = 6
-UI_LEFT_MARGIN = 4
-UI_TOP_MARGIN = 4
+UI_MARGIN = 4
 
 # XXX: the UI transitions are non-linear, so they take some time to execute
 # Modify this as you see fit and test by feel.
@@ -62,3 +60,8 @@ MIN_PEAK_INTERVAL = 600
 MAX_PEAK_INTERVAL = 1000
 # samples to display on screen
 SAMPLES_ON_SCREEN_SIZE = DISPLAY_WIDTH - 40
+
+UI_CLOCK_HOUR_ARROW_LENGTH_PX = 10
+UI_CLOCK_MINUTE_ARROW_LENGTH_PX = 16
+UI_CLOCK_SECOND_ARROW_LENGTH_PX = 20
+

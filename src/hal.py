@@ -4,10 +4,10 @@ from gc import collect as gc_collect
 from constants import (
     ROTARY_BUTTON_DEBOUNCE_MS,
     LONG_PRESS_MS,
-    DISPLAY_WIDTH,
-    DISPLAY_HEIGHT,
-    CAT_SIZE_WIDTH,
-    CAT_SIZE_HEIGTH,
+    DISPLAY_WIDTH_PX,
+    DISPLAY_HEIGHT_PX,
+    CAT_SIZE_WIDTH_PX,
+    CAT_SIZE_HEIGTH_PX,
     PIN_ROTARY_A,
     PIN_SIGNAL_LED,
     PIN_ROTARY_B,
@@ -19,6 +19,7 @@ from constants import (
     PIN_SENSOR,
 )
 import ssd1306
+import os
 
 
 # Hardware abstraction layer over the Pico W
@@ -47,6 +48,11 @@ class HAL:
         self.short_button_press = False
 
         self.rotary_reset_timer_ms = 0
+
+        self.is_first_frame = True
+
+        self.is_display_inverted = False
+        self.is_display_flipped = False
 
     def _rotary_knob_press(self, _):
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_ms():
@@ -83,7 +89,7 @@ class HAL:
         increment |= threshold_hit
 
         if increment:
-            self.rotary_motion_queue = 1 if self.rotary_accumulator > 0 else -1
+            self.rotary_motion_queue += -1 if self.rotary_accumulator > 0 else 1
 
             rotary_accumulator = self.rotary_accumulator
             rotary_accumulator = (
@@ -118,6 +124,7 @@ class HAL:
             if self._state is new_state:
                 return
             gc_collect()
+            self.flush_files()
             self.onboard_led.toggle()
             self._state = new_state
         return self._state
@@ -164,15 +171,40 @@ class HAL:
                 self.rotary_accumulator = 0
                 self.rotary_reset_timer_ms = 0
 
-        self._state()
-        self.display.show()
+        running_state = self._state
+        running_state()
 
+        # If the state was changed it will be the new state's
+        # first frame, otherwise we reset it
+        self.is_first_frame = not (self._state is running_state)
+
+    @staticmethod
+    def always_redraw(f):
+        def wrapper(self):
+            ret = f(self)
+            self.display.show()
+            return ret
+
+        return wrapper
+
+    def request_redraw(self):
         # TODO: just for testing purposes
         # this is where the cat will be
         self.display.fill_rect(
-            DISPLAY_WIDTH - CAT_SIZE_WIDTH,
-            DISPLAY_HEIGHT - CAT_SIZE_HEIGTH,
-            DISPLAY_WIDTH,
-            DISPLAY_HEIGHT,
+            DISPLAY_WIDTH_PX - CAT_SIZE_WIDTH_PX,
+            DISPLAY_HEIGHT_PX - CAT_SIZE_HEIGTH_PX,
+            DISPLAY_WIDTH_PX,
+            DISPLAY_HEIGHT_PX,
             1,
         )
+
+        self.display.show()
+
+    def invert_display(self):
+        self.is_display_inverted = not self.is_display_inverted
+        self.display.invert(self.is_display_inverted)
+
+    @staticmethod
+    def flush_files():
+        # Micropython-specific function
+        os.sync()  # type: ignore

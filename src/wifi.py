@@ -3,6 +3,7 @@ import time
 import random
 import socket
 from secrets import secrets
+from logging import eth_log
 
 ssid = secrets["ssid"]
 password = secrets["password"]
@@ -15,23 +16,29 @@ pushgateway_port = int(secrets["pushgateway_port"])
 device_id = secrets["device_id"]
 
 
-def ConnectWifi():
+
+def connect_ap():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(ssid, password)
 
-    if wlan.status() != 3:
-        raise RuntimeError("Wifi connection unsuccessful, are the secrets setup?")
+
+    for _ in range(5):
+        if wlan.status() == 3:
+            eth_log("Wifi connection successful!")
+            network_info = wlan.ifconfig()
+            eth_log(f"IP: {network_info[0]}")
+            return wlan
         time.sleep(1)
-    else:
-        print("Wifi connection successful!")
-        network_info = wlan.ifconfig()
-        print("IP:", network_info[0])
-        return wlan
+    raise RuntimeError("Wifi connection unsuccessful, are the secrets setup?")
 
 
-def pushgatewaySend(data):
+def pushgateway_send(data):
     try:
+        if not data:
+            eth_log("No data to send")
+            return
+
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((pushgateway_ip, pushgateway_port))
 
@@ -47,17 +54,21 @@ def pushgatewaySend(data):
         s.send(http_request.encode())
         response = s.recv(1024)
         s.close()
-        print("Data sent")
-        print("Response:", response)
+        eth_log("Data sent")
+        eth_log(f"Response: {response}")
     except Exception as e:
-        print("Error sending:", e)
+        eth_log(f"Error sending: {e}")
 
 
-ConnectWifi()
-while True:
+def pushgateway_send_test():
     random_value = random.uniform(0, 100)
     type = "Test data"
     data = f'Random{{device="{device_id}",type="{type}"}} {random_value}\n'
-    print(data)
-    pushgatewaySend(data)
+    eth_log(data)
+    pushgateway_send(data)
+
+
+connect_ap()
+while True:
+    pushgateway_send_test()
     time.sleep(1)
