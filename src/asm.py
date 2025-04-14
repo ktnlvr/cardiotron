@@ -5,7 +5,7 @@ from heart import (
     low_pass_filter,
     min_max_scaling,
     compute_corrected_mean,
-    detect_peaks,
+    is_sample_peak,
     draw_graph,
     draw_heart_rate_counter,
 )
@@ -30,6 +30,7 @@ from constants import (
     UI_CLOCK_MINUTE_ARROW_LENGTH_PX,
     UI_CLOCK_SECOND_ARROW_LENGTH_PX,
     HEART_SAMPLES_BUFFER_SIZE,
+    PPI_SIZE,
 )
 from time import localtime
 from math import tau, sin, cos
@@ -79,7 +80,7 @@ class Machine(HAL):
         self.heart_rate_sample_timer = Timer()
 
         self.last_peak_ms = None
-        self.peak_diffs_ms = []
+        self.ppis_ms = []
         self.heart_rate = 0
 
         self.last_filtered_sample = 0
@@ -135,18 +136,31 @@ class Machine(HAL):
             )
         mean_window.append(filtered_sample)
 
-        current_time = time.ticks_ms()
-        is_peak = detect_peaks(
+        current_time_ms = time.ticks_ms()
+        is_peak = is_sample_peak(
             filtered_sample,
             dy - self.last_dy,
             corrected_mean,
-            current_time,
-            self.peak_diffs_ms,
-            self,
         )
 
-        if time.ticks_diff(current_time, self.last_peak_ms) > 3000:
-            self.peak_diffs_ms = []
+        if is_peak:
+            # NOTE(Artur): Candidate for a new peak sequence, possibly can
+            # break out of bad PPIs
+            self.last_peak_ms = current_time_ms
+
+            if MIN_PEAK_INTERVAL < time_since_peak_ms < MAX_PEAK_INTERVAL:
+                # the two last peaks had sensible intervals, start measuring heart rate
+                time_since_peak_ms = current_time_ms - (self.last_peak_ms or current_time_ms - 1)
+                self.ppis_ms.append(time_since_peak_ms)
+                mean_peak = (
+                    sum(self.ppis_ms[-PPI_SIZE:]) / len(self.ppis_ms[-PPI_SIZE:])
+                    if self.ppis_ms
+                    else 0
+                )
+                self.heart_rate = int(60000 / mean_peak if mean_peak else 0)
+
+        if time.ticks_diff(current_time_ms, self.last_peak_ms) > 3000:
+            self.ppis_ms = []
             self.heart_rate = 0
 
         mi = min(self.heart_rate_screen_samples)

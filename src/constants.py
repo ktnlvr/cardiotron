@@ -54,6 +54,7 @@ SAMPLE_SIZE = 200
 # Last n values taken in consideration when the heart rate is calculated
 MEAN_WINDOW_SIZE = 50
 PPI_SIZE = 50
+
 # Scaling factor for the next peak
 MEAN_WINDOW_PERCENT = 1.35
 MIN_PEAK_INTERVAL = 500

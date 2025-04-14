@@ -32,33 +32,15 @@ def compute_corrected_mean(mean_window, mean):
 
 
 # obj for last_peak_ms
-def detect_peaks(
+def is_sample_peak(
     sample: float,
     ddy: float,
     corrected_mean: float,
-    current_time_ms: float,
-    peak_diffs_ms: list[float],
-    obj: Machine,
 ):
-    is_peak = False
-    if (
+    return (
         ddy < 0
         and sample > corrected_mean
-    ):
-        if obj.last_peak_ms is not None:
-            peak_diff = time.ticks_diff(current_time_ms, obj.last_peak_ms)
-
-            if peak_diff >= MIN_PEAK_INTERVAL and peak_diff <= MAX_PEAK_INTERVAL:
-                mean_peak = (
-                    sum(peak_diffs_ms) / len(peak_diffs_ms) if peak_diffs_ms else 0
-                )
-                peak_diffs_ms.append(peak_diff)
-                obj.heart_rate = int(60000 / mean_peak if mean_peak else 0)
-                is_peak = True
-                if len(peak_diffs_ms) > PPI_SIZE:
-                    peak_diffs_ms = peak_diffs_ms[-PPI_SIZE:]
-        obj.last_peak_ms = current_time_ms
-    return is_peak
+    )
 
 
 def draw_graph(display, samples_on_screen, prev_y):
