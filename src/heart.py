@@ -5,6 +5,7 @@ from constants import (
     MIN_PEAK_INTERVAL,
     MAX_PEAK_INTERVAL,
     PPI_SIZE,
+    SAMPLES_ON_SCREEN_SIZE,
 )
 import time
 
@@ -16,6 +17,8 @@ def low_pass_filter(previous_value: float, next_value: float):
 def min_max_scaling(max_value: int, min_value: int, value: int):
     return (DISPLAY_HEIGHT - 1) - int(
         (value - min_value) / (max_value - min_value) * (DISPLAY_HEIGHT - 1)
+        if max_value != min_value
+        else 0
     )
 
 
@@ -37,7 +40,7 @@ def detect_peaks(
     obj: Machine,
 ):
     if len(samples) < 3:
-        return
+        return obj.heart_rate
     prev_value, current_value, next_value = samples[-3], samples[-2], samples[-1]
 
     if (
@@ -53,10 +56,11 @@ def detect_peaks(
                     sum(peak_diffs_ms) / len(peak_diffs_ms) if peak_diffs_ms else 0
                 )
                 peak_diffs_ms.append(peak_diff)
-                print(f"{60000 / mean_peak if mean_peak else 0:.2f}")
+                obj.heart_rate = int(60000 / mean_peak if mean_peak else 0)
                 if len(peak_diffs_ms) > PPI_SIZE:
                     peak_diffs_ms = peak_diffs_ms[-PPI_SIZE:]
         obj.last_peak_ms = current_time_ms
+    return obj.heart_rate
 
 
 def draw_graph(display, samples_on_screen, prev_y):
@@ -70,3 +74,7 @@ def draw_graph(display, samples_on_screen, prev_y):
         display.pixel(screen_x, screen_y, 1)
         display.line(prev_x, prev_y, screen_x, screen_y, 1)
         prev_x, prev_y = screen_x, screen_y
+
+
+def draw_heart_rate_counter(display, heart_rate):
+    display.text(str(int(heart_rate)), SAMPLES_ON_SCREEN_SIZE + 16, 32, 1)

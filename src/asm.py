@@ -4,7 +4,7 @@ from constants import (
     SAMPLE_RATE,
     TIMESTAMP_DIFFERENCE_SENSOR,
     ALPHA,
-    SAMPLES_PER_PIXEL,
+    SAMPLES_PROCESSED_PER_COLLECTED,
     SAMPLE_SIZE,
     DISPLAY_HEIGHT,
     DISPLAY_WIDTH,
@@ -12,6 +12,7 @@ from constants import (
     MEAN_WINDOW_SIZE,
     MIN_PEAK_INTERVAL,
     MAX_PEAK_INTERVAL,
+    SAMPLES_ON_SCREEN_SIZE,
 )
 import time
 from heart import (
@@ -20,6 +21,7 @@ from heart import (
     compute_corrected_mean,
     detect_peaks,
     draw_graph,
+    draw_heart_rate_counter,
 )
 from bench import span_begin, span_end
 
@@ -41,6 +43,7 @@ class Machine(HAL):
         self.samples = []
         self.last_peak_ms = None
         self.peak_diffs_ms = []
+        self.heart_rate = 0
 
     def main_menu(self):
         self.main_menu_ui.tick()
@@ -49,7 +52,7 @@ class Machine(HAL):
         prev_y = DISPLAY_HEIGHT - 1
         samples_on_screen = []
         mean_window = []
-
+        self.heart_rate = 0
         while True:
             self.display.fill(0)
             # span_begin("GG")
@@ -57,7 +60,8 @@ class Machine(HAL):
             corrected_mean = compute_corrected_mean(mean_window, mean)
 
             new_samples = [
-                self.sensor_pin_adc.read_u16() for _ in range(SAMPLES_PER_PIXEL)
+                self.sensor_pin_adc.read_u16()
+                for _ in range(SAMPLES_PROCESSED_PER_COLLECTED)
             ]
             filtered_sample = sum(new_samples) / len(new_samples)
             self.samples.append(filtered_sample)
@@ -71,20 +75,22 @@ class Machine(HAL):
                 mean_window = mean_window[-MEAN_WINDOW_SIZE:]
 
             current_time = time.ticks_ms()
-            detect_peaks(
+            self.heart_rate = detect_peaks(
                 self.samples, corrected_mean, current_time, self.peak_diffs_ms, self
             )
-            if time.ticks_diff(current_time, self.last_peak_ms) > 5000:
+
+            if time.ticks_diff(current_time, self.last_peak_ms) > 3000:
                 self.peak_diffs_ms = []
-                heart_rate = 0
+                self.heart_rate = 0
             # span_end("GG")
 
             samples_on_screen = (
-                self.samples[-DISPLAY_WIDTH:]
-                if len(self.samples) > DISPLAY_WIDTH
+                self.samples[-SAMPLES_ON_SCREEN_SIZE:]
+                if len(self.samples) > SAMPLES_ON_SCREEN_SIZE
                 else self.samples
             )
             draw_graph(self.display, samples_on_screen, prev_y)
+            draw_heart_rate_counter(self.display, self.heart_rate)
             self.display.show()
 
             if len(self.samples) >= 2:
