@@ -36,6 +36,7 @@ from time import localtime
 from math import tau, sin, cos
 from ringbuffer import Ringbuffer
 from machine import Timer
+import math
 
 
 class Machine(HAL):
@@ -85,6 +86,7 @@ class Machine(HAL):
 
         self.last_filtered_sample = 0
         self.last_dy = 0
+        self.display_analysis_state = False
 
     def main_menu(self):
         self.main_menu_ui.tick()
@@ -109,6 +111,10 @@ class Machine(HAL):
             self.state(self.main_menu)
             self._reset_heart_measurements()
             return
+
+        if self.button_short():
+            self.set_heart_sensor_active(False)
+            self.state(self.display_heart_rate_analysis)
 
         if self.is_first_frame:
             self.set_heart_sensor_active(True)
@@ -146,18 +152,18 @@ class Machine(HAL):
         if is_peak:
             # NOTE(Artur): Candidate for a new peak sequence, possibly can
             # break out of bad PPIs
-            self.last_peak_ms = current_time_ms
+            if self.last_peak_ms is not None:
+                time_since_peak_ms = current_time_ms - self.last_peak_ms
+                if MIN_PEAK_INTERVAL < time_since_peak_ms < MAX_PEAK_INTERVAL:
+                    self.ppis_ms.append(time_since_peak_ms)
+                    mean_peak = (
+                        sum(self.ppis_ms[-PPI_SIZE:]) / len(self.ppis_ms[-PPI_SIZE:])
+                        if self.ppis_ms
+                        else 0
+                    )
+                    self.heart_rate = int(60000 / mean_peak if mean_peak else 0)
 
-            if MIN_PEAK_INTERVAL < time_since_peak_ms < MAX_PEAK_INTERVAL:
-                # the two last peaks had sensible intervals, start measuring heart rate
-                time_since_peak_ms = current_time_ms - (self.last_peak_ms or current_time_ms - 1)
-                self.ppis_ms.append(time_since_peak_ms)
-                mean_peak = (
-                    sum(self.ppis_ms[-PPI_SIZE:]) / len(self.ppis_ms[-PPI_SIZE:])
-                    if self.ppis_ms
-                    else 0
-                )
-                self.heart_rate = int(60000 / mean_peak if mean_peak else 0)
+            self.last_peak_ms = current_time_ms
 
         if time.ticks_diff(current_time_ms, self.last_peak_ms) > 3000:
             self.ppis_ms = []
@@ -184,6 +190,41 @@ class Machine(HAL):
 
         self.last_filtered_sample = filtered_sample
         self.last_dy = dy
+
+    @HAL.always_redraw
+    def display_heart_rate_analysis(self):
+        if self.button_long():
+            self.set_heart_sensor_active(False)
+            self.state(self.main_menu)
+            self.display_analysis_state = False
+            return
+
+        self.display.fill(0)
+        self.display_analysis_state = True
+        mean_ppi = (
+            sum(self.ppis_ms) / len(self.ppis_ms) if len(self.ppis_ms) != 0 else 0
+        )
+        mean_hr = 60000 / mean_ppi if mean_ppi != 0 else 0
+        sdnn = (
+            math.sqrt(
+                sum((ppi - mean_ppi) ** 2 for ppi in self.ppis_ms) / len(self.ppis_ms)
+            )
+            if len(self.ppis_ms) != 0
+            else 0
+        )
+        successive_diffs = [
+            self.ppis_ms[i + 1] - self.ppis_ms[i] for i in range(len(self.ppis_ms) - 1)
+        ]
+        rmssd = (
+            math.sqrt(sum(diff**2 for diff in successive_diffs) / len(successive_diffs))
+            if successive_diffs
+            else 0
+        )
+
+        self.display.text(f"Mean HR: {int(mean_hr)}", 8, 8, 1)
+        self.display.text(f"Mean PPI: {int(mean_ppi)}", 8, 24, 1)
+        self.display.text(f"SDNN: {sdnn:.2f}", 8, 40, 1)
+        self.display.text(f"RMSSD: {rmssd:.2f}", 8, 56, 1)
 
     @HAL.always_redraw
     def toast(self):
