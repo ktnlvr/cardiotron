@@ -86,7 +86,6 @@ class Machine(HAL):
 
         self.last_filtered_sample = 0
         self.last_dy = 0
-        self.display_analysis_state = False
 
     def main_menu(self):
         self.main_menu_ui.tick()
@@ -196,11 +195,9 @@ class Machine(HAL):
         if self.button_long():
             self.set_heart_sensor_active(False)
             self.state(self.main_menu)
-            self.display_analysis_state = False
             return
 
         self.display.fill(0)
-        self.display_analysis_state = True
         mean_ppi = (
             sum(self.ppis_ms) / len(self.ppis_ms) if len(self.ppis_ms) != 0 else 0
         )
