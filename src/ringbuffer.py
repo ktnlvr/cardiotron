@@ -1,5 +1,6 @@
 from array import array
 
+
 class Ringbuffer:
     def __init__(self, size, typecode):
         self.start = 0
@@ -30,11 +31,11 @@ class Ringbuffer:
             return value
 
     def __repr__(self):
-        out = ''
+        out = ""
         for i, v in enumerate(self.data):
             if i == self.start:
-                out += '| '
+                out += "| "
             if i == self.end:
-                out += '> '
-            out += str(v) +' '
+                out += "> "
+            out += str(v) + " "
         return out

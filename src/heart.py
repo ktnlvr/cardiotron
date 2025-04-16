@@ -37,10 +37,7 @@ def is_sample_peak(
     ddy: float,
     corrected_mean: float,
 ):
-    return (
-        ddy < 0
-        and sample > corrected_mean
-    )
+    return ddy < 0 and sample > corrected_mean
 
 
 def draw_graph(display, samples_on_screen, prev_y):

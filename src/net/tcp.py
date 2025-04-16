@@ -14,9 +14,10 @@ from net.server import connection
 
 class TCP:
     """TCP stream handler"""
+
     MSS = 536  # TCP/IP Maximum Segment Size
-    
-    class Writer(namedtuple('Writer', ['data', 'buff', 'buffmv', 'range'])):
+
+    class Writer(namedtuple("Writer", ["data", "buff", "buffmv", "range"])):
         pass
 
     def __init__(self, poller):
@@ -64,13 +65,13 @@ class TCP:
             if not data:
                 writers.remove(curr)
                 return not writers
-            
+
             # Copy data into buffer
-            curr.buff[:len(data)] = data
+            curr.buff[: len(data)] = data
             curr.range[1] = len(data)
-            
+
             # Write from buffer
-            bytes_written = sock.write(curr.buffmv[:curr.range[1]])
+            bytes_written = sock.write(curr.buffmv[: curr.range[1]])
             if bytes_written == curr.range[1]:
                 curr.range[0] = curr.range[1] = 0
             else:

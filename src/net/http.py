@@ -1,6 +1,7 @@
 """
 HTTP handler for captive portal
 """
+
 import io
 import select
 import socket
@@ -11,6 +12,7 @@ from logging import eth_log
 from net import encode, unquote
 from net.tcp import TCP
 from net.server import Orchestrator, Protocol, Server, connection, IpSink
+
 
 class HTTP(Server):
     NL = b"\r\n"
@@ -30,7 +32,9 @@ class HTTP(Server):
         def of(ext_or_type):
             return b"Content-Type: " + encode(ext_or_type) if ext_or_type else b""
 
-    Request = namedtuple("Request", "host method path raw_query query headers body socket_id")
+    Request = namedtuple(
+        "Request", "host method path raw_query query headers body socket_id"
+    )
 
     class Response:
         class Status:
@@ -108,20 +112,28 @@ class HTTP(Server):
         req_type, full_path, *_ = header_lines[0].split(b" ")
         path, *rest = full_path.split(b"?", 1)
         raw_query = rest[0] if len(rest) else None
-        query = {
-            unquote(key): unquote(val)
-            for key, val in [param.split(b"=") for param in raw_query.split(b"&")]
-        } if raw_query else {}
+        query = (
+            {
+                unquote(key): unquote(val)
+                for key, val in [param.split(b"=") for param in raw_query.split(b"&")]
+            }
+            if raw_query
+            else {}
+        )
         headers = {
             key: val for key, val in [line.split(b": ", 1) for line in header_lines[1:]]
         }
         host = headers.get(b"Host", None)
         socket_id = headers.get(b"X-Pico-Fi-Socket-Id", None)
-        return HTTP.Request(host, req_type, path, raw_query, query, headers, body_bytes, socket_id)
+        return HTTP.Request(
+            host, req_type, path, raw_query, query, headers, body_bytes, socket_id
+        )
 
     def parse_route(self, req):
         prefix = b"/" + (req.path.split(b"/") + [b""])[1]
-        return (req.host == self.ip or not self.ip_sink.get()) and self.routes.get(prefix, None)
+        return (req.host == self.ip or not self.ip_sink.get()) and self.routes.get(
+            prefix, None
+        )
 
     def handle_request(self, sock, req):
         res = HTTP.Response(self, sock)

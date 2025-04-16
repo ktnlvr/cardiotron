@@ -16,12 +16,10 @@ pushgateway_port = int(secrets["pushgateway_port"])
 device_id = secrets["device_id"]
 
 
-
 def connect_ap():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(ssid, password)
-
 
     for _ in range(5):
         if wlan.status() == 3:
@@ -66,9 +64,3 @@ def pushgateway_send_test():
     data = f'Random{{device="{device_id}",type="{type}"}} {random_value}\n'
     eth_log(data)
     pushgateway_send(data)
-
-
-connect_ap()
-while True:
-    pushgateway_send_test()
-    time.sleep(1)

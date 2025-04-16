@@ -9,16 +9,11 @@ from heart import (
     draw_graph,
     draw_heart_rate_counter,
 )
-from bench import span_begin, span_end
 from constants import (
     SAMPLE_RATE,
-    TIMESTAMP_DIFFERENCE_SENSOR,
-    ALPHA,
-    SAMPLES_PROCESSED_PER_COLLECTED,
     SAMPLE_SIZE,
     DISPLAY_HEIGHT_PX,
     DISPLAY_WIDTH_PX,
-    MEAN_WINDOW_PERCENT,
     MEAN_WINDOW_SIZE,
     MIN_PEAK_INTERVAL,
     MAX_PEAK_INTERVAL,
