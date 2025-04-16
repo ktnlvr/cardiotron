@@ -233,7 +233,7 @@ class Machine(HAL):
                 timer_str = f"{m}:{s:02}"
             self.display.text(timer_str, 0, 0, 1)
 
-        self.display.show()
+        self.request_redraw()
 
         self.last_filtered_sample = filtered_sample
         self.last_dy = dy
@@ -314,7 +314,7 @@ class Machine(HAL):
 
             self.display.fill(0)
             for i, line in enumerate(lines):
-                self.display.text(line, CHAR_SIZE_HEIGHT_PX * i, 0)
+                self.display.text(line, 0, CHAR_SIZE_HEIGHT_PX * i)
             self.request_redraw()
 
         return _toast_state_machine
@@ -457,7 +457,7 @@ class Machine(HAL):
 
         self.display.fill(0)
         self.display.text(text, 0, 0, 1)
-        self.display.show()
+        self.request_redraw()
 
         if wlan_status != STAT_CONNECTING:
             self.wlan_connecting_ongoing = None
@@ -474,7 +474,7 @@ class Machine(HAL):
         elif wlan_status == STAT_CONNECTING:
             text = "Connecting..."
         elif wlan_status == STAT_CONNECT_FAIL:
-            self.state(self.toast("Sorry...\nConnection failure"))
+            self.state(self.toast("Connection\nfailed, check\ncredentials"))
             return
         else:
             self.wlan_connecting_ongoing = None
