@@ -30,6 +30,12 @@ class Ringbuffer:
             self.start = (self.start + 1) % self.size
             return value
 
+    def clear(self):
+        for i in range(self.size):
+            self.data[i] = 0
+        self.end = 0
+        self.start = 0
+
     def __repr__(self):
         out = ""
         for i, v in enumerate(self.data):
