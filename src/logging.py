@@ -25,15 +25,16 @@ def init_logs():
     active_log = open(f"logs/{log_name}", "a+")
 
 
-def log(*args):
-    if not active_log:
-        init_logs()
-    string = f"[{localtime_string()}] " + " ".join(map(str, args))
-    print(string)
-    active_log.write(string.encode("utf-8"))  # type: ignore
-    active_log.flush()  # type: ignore
-
-
 def eth_log(*args):
     string = f"[{localtime_string()}] " + " ".join(map(str, args))
     print(string)
+    return string
+
+
+def log(*args):
+    if not active_log:
+        init_logs()
+    string = eth_log(*args)
+    active_log.write(string.encode("utf-8"))  # type: ignore
+    active_log.flush()  # type: ignore
+    return string
