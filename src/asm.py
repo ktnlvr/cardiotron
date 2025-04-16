@@ -213,7 +213,13 @@ class Machine(HAL):
             time_since_measurement_started_s = round(
                 (current_time_ms - self.heart_rate_first_sane_peak_ms) / 1000
             )
-            self.display.text(f"{time_since_measurement_started_s}s", 0, 0, 1)
+
+            timer_str = f"{time_since_measurement_started_s}s"
+            if time_since_measurement_started_s >= 60:
+                m = time_since_measurement_started_s // 60
+                s = time_since_measurement_started_s % 60
+                timer_str = f"{m}:{s:02}"
+            self.display.text(timer_str, 0, 0, 1)
 
         self.display.show()
 
