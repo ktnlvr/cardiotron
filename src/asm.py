@@ -6,7 +6,6 @@ from heart import (
     min_max_scaling,
     compute_corrected_mean,
     is_sample_peak,
-    draw_graph,
     draw_heart_rate_counter,
 )
 from constants import (
@@ -15,8 +14,8 @@ from constants import (
     DISPLAY_HEIGHT_PX,
     DISPLAY_WIDTH_PX,
     MEAN_WINDOW_SIZE,
-    MIN_PEAK_INTERVAL,
-    MAX_PEAK_INTERVAL,
+    MIN_PEAK_INTERVAL_MS,
+    MAX_PEAK_INTERVAL_MS,
     SAMPLES_ON_SCREEN_SIZE,
     UI_MARGIN,
     CHAR_SIZE_HEIGHT_PX,
@@ -25,6 +24,7 @@ from constants import (
     UI_CLOCK_MINUTE_ARROW_LENGTH_PX,
     UI_CLOCK_SECOND_ARROW_LENGTH_PX,
     HEART_SAMPLES_BUFFER_SIZE,
+    MAX_NO_PEAK_INTERVAL_MS,
     PPI_SIZE,
 )
 from time import localtime
@@ -79,6 +79,8 @@ class Machine(HAL):
         self.heart_rate_last_peak_ms = None
         self.heart_rate_ppis_ms = []
         self.heart_rate = 0
+
+        self.heart_rate_first_sane_peak_ms = 0
 
         self.last_filtered_sample = 0
         self.last_dy = 0
@@ -143,6 +145,7 @@ class Machine(HAL):
         mean_window.append(filtered_sample)
 
         current_time_ms = time.ticks_ms()
+
         is_peak = is_sample_peak(
             filtered_sample,
             dy - self.last_dy,
@@ -153,8 +156,12 @@ class Machine(HAL):
             # NOTE(Artur): Candidate for a new peak sequence, possibly can
             # break out of bad PPIs
             if self.heart_rate_last_peak_ms is not None:
+                # We start considering measurements starting from now
+                if not self.heart_rate_first_sane_peak_ms:
+                    self.heart_rate_first_sane_peak_ms = current_time_ms
+
                 time_since_peak_ms = current_time_ms - self.heart_rate_last_peak_ms
-                if MIN_PEAK_INTERVAL < time_since_peak_ms < MAX_PEAK_INTERVAL:
+                if MIN_PEAK_INTERVAL_MS < time_since_peak_ms < MAX_PEAK_INTERVAL_MS:
                     self.heart_rate_ppis_ms.append(time_since_peak_ms)
                     mean_peak = (
                         sum(self.heart_rate_ppis_ms[-PPI_SIZE:])
@@ -163,29 +170,50 @@ class Machine(HAL):
                         else 0
                     )
                     self.heart_rate = int(60000 / mean_peak if mean_peak else 0)
-
             self.heart_rate_last_peak_ms = current_time_ms
 
-        if time.ticks_diff(current_time_ms, self.heart_rate_last_peak_ms) > 3000:
+        if (
+            time.ticks_diff(current_time_ms, self.heart_rate_last_peak_ms)
+            > MAX_NO_PEAK_INTERVAL_MS
+        ):
+            self.heart_rate_first_sane_peak_ms = 0
             self.heart_rate_ppis_ms = []
             self.heart_rate = 0
 
         mi = min(self.heart_rate_screen_samples)
         ma = max(self.heart_rate_screen_samples)
 
+        TIMER_SIZE_Y = CHAR_SIZE_HEIGHT_PX
+        GRAPH_SIZE_Y = DISPLAY_HEIGHT_PX - 1 - TIMER_SIZE_Y
         prev_x = 0
         for screen_x in range(len(self.heart_rate_screen_samples)):
-            screen_y = min_max_scaling(
-                ma, mi, self.heart_rate_screen_samples.data[screen_x]
+            screen_y = (
+                min_max_scaling(
+                    ma, mi, self.heart_rate_screen_samples.data[screen_x], GRAPH_SIZE_Y
+                )
+                + TIMER_SIZE_Y
             )
             self.display.pixel(screen_x, screen_y, 1)
             self.display.line(prev_x, self.heart_rate_graph_y, screen_x, screen_y, 1)
             prev_x, self.heart_rate_graph_y = screen_x, screen_y
 
-        screen_mean = min_max_scaling(ma, mi, corrected_mean)
+        screen_mean = (
+            min_max_scaling(ma, mi, corrected_mean, GRAPH_SIZE_Y) + TIMER_SIZE_Y
+        )
+
+        # Show a small dot at the bottom indicating the currently read value
+        self.display.pixel(self.heart_rate_screen_samples.end, DISPLAY_HEIGHT_PX - 1, 1)
+
         self.display.line(0, screen_mean, SAMPLES_ON_SCREEN_SIZE, screen_mean, 1)
 
         draw_heart_rate_counter(self.display, self.heart_rate)
+
+        if self.heart_rate_first_sane_peak_ms:
+            # Display how long the measurement has been going
+            time_since_measurement_started_s = round(
+                (current_time_ms - self.heart_rate_first_sane_peak_ms) / 1000
+            )
+            self.display.text(f"{time_since_measurement_started_s}s", 0, 0, 1)
 
         self.display.show()
 

@@ -57,8 +57,10 @@ PPI_SIZE = 50
 
 # Scaling factor for the next peak
 MEAN_WINDOW_PERCENT = 1.35
-MIN_PEAK_INTERVAL = 500
-MAX_PEAK_INTERVAL = 1000
+MIN_PEAK_INTERVAL_MS = 500
+MAX_PEAK_INTERVAL_MS = 1000
+MAX_NO_PEAK_INTERVAL_MS = 2500
+
 # Samples to display on screen
 SAMPLES_ON_SCREEN_SIZE = DISPLAY_WIDTH_PX - 40
 # The amount of samples to be collected from the ADC

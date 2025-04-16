@@ -2,8 +2,8 @@ from constants import (
     ALPHA,
     DISPLAY_HEIGHT_PX,
     MEAN_WINDOW_PERCENT,
-    MIN_PEAK_INTERVAL,
-    MAX_PEAK_INTERVAL,
+    MIN_PEAK_INTERVAL_MS,
+    MAX_PEAK_INTERVAL_MS,
     PPI_SIZE,
     SAMPLES_ON_SCREEN_SIZE,
 )
@@ -14,9 +14,11 @@ def low_pass_filter(previous_value: float, next_value: float):
     return ALPHA * previous_value + (1 - ALPHA) * next_value
 
 
-def min_max_scaling(max_value: int, min_value: int, value: int):
-    return (DISPLAY_HEIGHT_PX - 1) - int(
-        (value - min_value) / (max_value - min_value) * (DISPLAY_HEIGHT_PX - 1)
+def min_max_scaling(
+    max_value: int, min_value: int, value: int, height=DISPLAY_HEIGHT_PX - 1
+):
+    return height - int(
+        (value - min_value) / (max_value - min_value) * height
         if max_value != min_value
         else 0
     )
