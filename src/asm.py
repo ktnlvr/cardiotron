@@ -33,6 +33,15 @@ from ringbuffer import Ringbuffer
 from machine import Timer
 import math
 from collections import OrderedDict
+from wifi import connect_ap
+from network import (
+    STAT_CONNECTING,
+    STAT_NO_AP_FOUND,
+    STAT_GOT_IP,
+    STAT_WRONG_PASSWORD,
+    STAT_CONNECT_FAIL,
+)
+from secrets import secrets
 
 
 class Machine(HAL):
@@ -61,8 +70,8 @@ class Machine(HAL):
             self,
             [
                 ("Measure", s(self.measure_heart_rate)),
-                ("History", s(self.toast)),
-                ("Setup", s(self.toast)),
+                ("History", s(self.toast("History"))),
+                ("Setup", s(self.connecting_wifi)),
                 ("Settings", s(self.settings)),
             ],
         )
@@ -84,6 +93,8 @@ class Machine(HAL):
 
         self.last_filtered_sample = 0
         self.last_dy = 0
+
+        self.wlan_connecting_ongoing = None
 
     def main_menu(self):
         self.main_menu_ui.tick()
@@ -288,13 +299,24 @@ class Machine(HAL):
 
         self.request_redraw()
 
-    @HAL.always_redraw
-    def toast(self):
-        if self.button():
-            self.state(self.main_menu)
+    def toast(self, message, previous_state=None, next_state=None):
+        lines = message.split("\n")
 
-        self.display.fill(0)
-        self.display.text("Toast", 0, 0)
+        def _toast_state_machine():
+            if self.button_long():
+                self.state(previous_state if previous_state else self.main_menu)
+                return
+
+            if self.button_short():
+                self.state(next_state if next_state else self.main_menu)
+                return
+
+            self.display.fill(0)
+            for i, line in enumerate(lines):
+                self.display.text(line, CHAR_SIZE_HEIGHT_PX * i, 0)
+            self.request_redraw()
+
+        return _toast_state_machine
 
     def settings(self):
         self.settings_ui.tick()
@@ -415,3 +437,64 @@ class Machine(HAL):
                 clock_center_y + y,
                 1,
             )
+
+    def connecting_wifi(self):
+        ssid = secrets["ssid"]
+        if not self.wlan_connecting_ongoing:
+            self.wlan_connecting_ongoing = connect_ap(self.wlan, ssid)
+
+        wlan_status = None
+        try:
+            wlan_status = next(self.wlan_connecting_ongoing)
+        except StopIteration:
+            pass
+
+        if self.button():
+            self.state(self.main_menu)
+
+        text = "Connecting..."
+
+        self.display.fill(0)
+        self.display.text(text, 0, 0, 1)
+        self.display.show()
+
+        if wlan_status != STAT_CONNECTING:
+            self.wlan_connecting_ongoing = None
+
+        if wlan_status == STAT_GOT_IP:
+            self.state(self.wifi_connected)
+            return
+        elif wlan_status == STAT_NO_AP_FOUND:
+            self.state(self.toast(f"Couldn't\nconnect to\n{ssid}"))
+            return
+        elif wlan_status == STAT_WRONG_PASSWORD:
+            self.state(self.toast(f"Wrong password!"))
+            return
+        elif wlan_status == STAT_CONNECTING:
+            text = "Connecting..."
+        elif wlan_status == STAT_CONNECT_FAIL:
+            self.state(self.toast("Sorry...\nConnection failure"))
+            return
+        else:
+            self.wlan_connecting_ongoing = None
+            raise Exception("Unhandled WLAN status!")
+
+        time.sleep(1)
+
+        self.display.text(text, 0, 0, 1)
+        self.request_redraw()
+
+    def wifi_connected(self):
+        if self.button():
+            self.state(self.main_menu)
+
+        if not self.is_first_frame:
+            return
+
+        self.display.fill(0)
+        ipv4, *_ = self.wlan.ifconfig()
+
+        self.display.text("Connected!", 0, 0, 1)
+        self.display.text(ipv4, 0, CHAR_SIZE_HEIGHT_PX, 1)
+
+        self.request_redraw()

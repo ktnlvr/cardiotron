@@ -1,5 +1,4 @@
 import network
-import time
 import random
 import socket
 from secrets import secrets
@@ -16,9 +15,13 @@ pushgateway_port = int(secrets["pushgateway_port"])
 device_id = secrets["device_id"]
 
 
-def connect_ap():
+def make_wlan():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
+    return wlan
+
+
+def connect_ap(wlan, ssid):
     wlan.connect(ssid, password)
 
     tries_left = 5
@@ -26,7 +29,6 @@ def connect_ap():
     last_status = None
 
     while tries_left > 0:
-        time.sleep(1)
         tries_left -= 1
 
         wlan_status = wlan.status()
@@ -38,10 +40,12 @@ def connect_ap():
             eth_log("Wifi connection successful!")
             network_info = wlan.ifconfig()
             eth_log(f"IP: {network_info[0]}")
-            return wlan
+
+        yield wlan_status
         eth_log(f"Wlan status {wlan_status}, retrying ({tries_left} tries left)")
 
-    raise RuntimeError("Wifi connection unsuccessful, are the secrets setup?")
+    eth_log("Wifi connection unsuccessful, are the secrets set up?")
+    return wlan_status
 
 
 def pushgateway_send(data):

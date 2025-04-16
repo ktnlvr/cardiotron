@@ -20,6 +20,8 @@ from constants import (
 )
 import ssd1306
 import os
+from wifi import make_wlan
+from logging import log
 
 
 # Hardware abstraction layer over the Pico W
@@ -53,6 +55,9 @@ class HAL:
 
         self.is_display_inverted = False
         self.is_display_flipped = False
+
+        self.wlan = make_wlan()
+        self.mqtt_client = None
 
     def _rotary_knob_press(self, _):
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_ms():
@@ -174,9 +179,13 @@ class HAL:
         running_state = self._state
         running_state()
 
+        switching_state = not (self._state is running_state)
+        if switching_state:
+            log(f"{running_state.__name__} -> {self._state.__name__}")
+
         # If the state was changed it will be the new state's
         # first frame, otherwise we reset it
-        self.is_first_frame = not (self._state is running_state)
+        self.is_first_frame = switching_state
 
     @staticmethod
     def always_redraw(f):
