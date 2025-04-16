@@ -21,13 +21,26 @@ def connect_ap():
     wlan.active(True)
     wlan.connect(ssid, password)
 
-    for _ in range(5):
-        if wlan.status() == 3:
+    tries_left = 5
+
+    last_status = None
+
+    while tries_left > 0:
+        time.sleep(1)
+        tries_left -= 1
+
+        wlan_status = wlan.status()
+        if wlan_status != last_status:
+            last_status = wlan_status
+            tries_left += 5
+
+        if wlan_status == network.STAT_GOT_IP:
             eth_log("Wifi connection successful!")
             network_info = wlan.ifconfig()
             eth_log(f"IP: {network_info[0]}")
             return wlan
-        time.sleep(1)
+        eth_log(f"Wlan status {wlan_status}, retrying ({tries_left} tries left)")
+
     raise RuntimeError("Wifi connection unsuccessful, are the secrets setup?")
 
 
