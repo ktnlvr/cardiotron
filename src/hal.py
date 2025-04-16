@@ -17,11 +17,13 @@ from constants import (
     ROTARY_ROTATION_RESET_TIMEOUT_MS,
     ROTARY_ROTATION_SENSETIVITY,
     PIN_SENSOR,
+    DEFAULT_MQTT_PORT,
 )
 import ssd1306
 import os
 from wifi import make_wlan
 from logging import log
+from umqtt.simple import MQTTClient
 
 
 # Hardware abstraction layer over the Pico W
@@ -58,6 +60,7 @@ class HAL:
 
         self.wlan = make_wlan()
         self.mqtt_client = None
+        self.mqtt_message_queue = []
 
     def _rotary_knob_press(self, _):
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_ms():
@@ -171,6 +174,9 @@ class HAL:
         """
         Run the current state once and update the display.
         """
+        if self.mqtt_client:
+            self.mqtt_client.check_msg()
+
         if ticks_ms() - self.rotary_reset_timer_ms > ROTARY_ROTATION_RESET_TIMEOUT_MS:
             if self.rotary_accumulator:
                 self.rotary_accumulator = 0
@@ -217,3 +223,15 @@ class HAL:
     def flush_files():
         # Micropython-specific function
         os.sync()  # type: ignore
+
+    def receive_mqtt_message(self, topic, content):
+        print(topic, content)
+
+    def connect_mqtt(self, server: str, port: int = DEFAULT_MQTT_PORT):
+        log(f"Connecting to an MQTT server {server}:{port}")
+        client_id = self.wlan.config("mac")
+        self.mqtt_client = MQTTClient(str(client_id), server, port)
+        self.mqtt_client.set_callback(self.receive_mqtt_message)
+        self.mqtt_client.connect()
+        self.mqtt_client.subscribe("#")
+        log("Connected to an MQTT server!")

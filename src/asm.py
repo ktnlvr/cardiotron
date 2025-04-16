@@ -26,6 +26,7 @@ from constants import (
     HEART_SAMPLES_BUFFER_SIZE,
     MAX_NO_PEAK_INTERVAL_MS,
     PPI_SIZE,
+    DEFAULT_MQTT_SERVER_ADDR,
 )
 from time import localtime
 from math import tau, sin, cos
@@ -496,5 +497,6 @@ class Machine(HAL):
 
         self.display.text("Connected!", 0, 0, 1)
         self.display.text(ipv4, 0, CHAR_SIZE_HEIGHT_PX, 1)
-
         self.request_redraw()
+
+        self.connect_mqtt(DEFAULT_MQTT_SERVER_ADDR)
