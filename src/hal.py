@@ -1,3 +1,4 @@
+import json
 from machine import Pin, I2C, ADC
 from time import ticks_ms
 from gc import collect as gc_collect
@@ -18,11 +19,13 @@ from constants import (
     ROTARY_ROTATION_SENSETIVITY,
     PIN_SENSOR,
     DEFAULT_MQTT_PORT,
+    MQTT_TOPICS,
+    MQTT_TOPIC_KUBIOS_RESPONSE,
 )
 import ssd1306
 import os
 from wifi import make_wlan
-from logging import log
+from logging import log, eth_log
 from umqtt.simple import MQTTClient
 
 
@@ -61,6 +64,7 @@ class HAL:
         self.wlan = make_wlan()
         self.mqtt_client = None
         self.mqtt_message_queue = []
+        self.mqtt_client_id = None
 
     def _rotary_knob_press(self, _):
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_ms():
@@ -224,14 +228,35 @@ class HAL:
         # Micropython-specific function
         os.sync()  # type: ignore
 
+    def on_receive_kubios_response(self, response):
+        eth_log(f"HAL.on_receive_kubios_response not overriden. Response: {response}")
+
     def receive_mqtt_message(self, topic, content):
-        print(topic, content)
+        try:
+            topic = topic.decode()
+            content = content.decode()
+            if topic == self.mqtt_client_id:
+                eth_log(f"Targeted MQTT Message to {self.mqtt_client_id}: {content}")
+            elif topic == MQTT_TOPIC_KUBIOS_RESPONSE:
+                content_object = json.loads(content)
+                self.on_receive_kubios_response(content_object)
+            else:
+                eth_log(f"Dropped MQTT Message for topic {topic}: {content}")
+        except Exception as e:
+            eth_log(f"Failed when receiving an MQTT message: {e}")
 
     def connect_mqtt(self, server: str, port: int = DEFAULT_MQTT_PORT):
-        log(f"Connecting to an MQTT server {server}:{port}")
-        client_id = self.wlan.config("mac")
-        self.mqtt_client = MQTTClient(str(client_id), server, port)
+        self.mqtt_client_id = self.wlan.config("mac").hex()
+
+        log(f"Connecting to an MQTT Server {server}:{port}")
+
+        self.mqtt_client = MQTTClient(self.mqtt_client_id, server, port)
         self.mqtt_client.set_callback(self.receive_mqtt_message)
         self.mqtt_client.connect()
-        self.mqtt_client.subscribe("#")
-        log("Connected to an MQTT server!")
+
+        for topic in MQTT_TOPICS + [self.mqtt_client_id]:
+            self.mqtt_client.subscribe(topic)
+
+        log(
+            f"Connected to an MQTT Server! Hello! I am MQTT Client {self.mqtt_client_id}"
+        )
