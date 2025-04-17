@@ -233,7 +233,7 @@ class Machine(HAL):
                 timer_str = f"{m}:{s:02}"
             self.display.text(timer_str, 0, 0, 1)
 
-        self.request_redraw()
+        self.display.show()
 
         self.last_filtered_sample = filtered_sample
         self.last_dy = dy
@@ -298,7 +298,7 @@ class Machine(HAL):
                 1,
             )
 
-        self.request_redraw()
+        self.display.show()
 
     def toast(self, message, previous_state=None, next_state=None):
         lines = message.split("\n")
