@@ -285,8 +285,8 @@ class Machine(HAL):
             [
                 ("Mean HR", f"{round(mean_hr)}"),
                 ("Mean PPI", f"{round(mean_ppi)}"),
-                ("SDNN", f"{sdnn:.2}"),
-                ("rMSSD", f"{rmssd:.2}"),
+                ("SDNN", f"{sdnn:.2f}"),
+                ("rMSSD", f"{rmssd:.2f}"),
             ]
         )
 
