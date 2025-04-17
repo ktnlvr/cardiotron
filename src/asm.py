@@ -81,6 +81,8 @@ class Machine(HAL):
         self.heart_rate_graph_y = DISPLAY_HEIGHT_PX - 1
         self.heart_rate_mean_window = Ringbuffer(MEAN_WINDOW_SIZE, "f")
         self.heart_rate_screen_samples = Ringbuffer(SAMPLES_ON_SCREEN_SIZE, "f")
+        self.heart_rate_peak_screen_locations = set()
+
         self.filtered_samples = Ringbuffer(SAMPLE_SIZE, "f")
 
         self.heart_rate_samples = Ringbuffer(HEART_SAMPLES_BUFFER_SIZE, "H")
@@ -139,6 +141,8 @@ class Machine(HAL):
 
         mean_window = self.heart_rate_mean_window
 
+        # Reset an old peak location
+
         self.display.fill(0)
         mean = sum(mean_window) / len(mean_window) if len(mean_window) else 0
         corrected_mean = compute_corrected_mean(mean_window, mean)
@@ -149,6 +153,11 @@ class Machine(HAL):
 
         self.filtered_samples.append(filtered_sample)
         self.heart_rate_screen_samples.append(filtered_sample)
+
+        if self.heart_rate_screen_samples.end in self.heart_rate_peak_screen_locations:
+            self.heart_rate_peak_screen_locations.remove(
+                self.heart_rate_screen_samples.end
+            )
 
         if self.filtered_samples:
             filtered_sample = low_pass_filter(
@@ -168,6 +177,10 @@ class Machine(HAL):
             # NOTE(Artur): Candidate for a new peak sequence, possibly can
             # break out of bad PPIs
             if self.heart_rate_last_peak_ms is not None:
+                self.heart_rate_peak_screen_locations.add(
+                    self.heart_rate_screen_samples.end
+                )
+
                 # We start considering measurements starting from now
                 if not self.heart_rate_first_sane_peak_ms:
                     self.heart_rate_first_sane_peak_ms = current_time_ms
@@ -182,6 +195,7 @@ class Machine(HAL):
                         else 0
                     )
                     self.heart_rate = int(60000 / mean_peak if mean_peak else 0)
+
             self.heart_rate_last_peak_ms = current_time_ms
 
         if (
@@ -208,6 +222,9 @@ class Machine(HAL):
             self.display.pixel(screen_x, screen_y, 1)
             self.display.line(prev_x, self.heart_rate_graph_y, screen_x, screen_y, 1)
             prev_x, self.heart_rate_graph_y = screen_x, screen_y
+
+        for peak_x in self.heart_rate_peak_screen_locations:
+            self.display.pixel(peak_x, DISPLAY_HEIGHT_PX - 1, 1)
 
         screen_mean = (
             min_max_scaling(ma, mi, corrected_mean, GRAPH_SIZE_Y) + TIMER_SIZE_Y
