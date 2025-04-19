@@ -75,3 +75,8 @@ DEFAULT_MQTT_PORT = 1883
 
 MQTT_TOPIC_KUBIOS_RESPONSE = "kubios-response"
 MQTT_TOPICS = [MQTT_TOPIC_KUBIOS_RESPONSE]
+
+# History and data storage constants
+HISTORY_ENTRIES_PER_PAGE = 5
+HISTORY_DATA_FILENAME = "hr_data/data.txt"
+HISTORY_DATA_FOLDER = "hr_data"

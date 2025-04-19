@@ -27,6 +27,7 @@ from constants import (
     MAX_NO_PEAK_INTERVAL_MS,
     PPI_SIZE,
     DEFAULT_MQTT_SERVER_ADDR,
+    HISTORY_ENTRIES_PER_PAGE,
 )
 from time import localtime
 from math import tau, sin, cos
@@ -43,6 +44,7 @@ from network import (
     STAT_CONNECT_FAIL,
 )
 from secrets import secrets
+from history import store_data, read_data
 
 
 class Machine(HAL):
@@ -71,7 +73,7 @@ class Machine(HAL):
             self,
             [
                 ("Measure", s(self.measure_heart_rate)),
-                ("History", s(self.toast("History"))),
+                ("History", s(self.history)),
                 ("Setup", s(self.connecting_wifi)),
                 ("Settings", s(self.settings)),
             ],
@@ -98,6 +100,10 @@ class Machine(HAL):
         self.last_dy = 0
 
         self.wlan_connecting_ongoing = None
+
+        self.history_data = []
+        self.history_page = 0
+        self.history_entries_per_page = HISTORY_ENTRIES_PER_PAGE
 
     def main_menu(self):
         self.main_menu_ui.tick()
@@ -314,6 +320,57 @@ class Machine(HAL):
                 (CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP) * i,
                 1,
             )
+
+        self.display.show()
+
+    def history(self):
+        """
+        Display heart rate history with navigation
+        """
+        if self.is_first_frame:
+            self.history_data = read_data()
+            self.history_page = 0
+
+        if self.button_long():
+            self.state(self.main_menu)
+            return
+
+        if self.button_short():
+            # Cycle through pages by single click
+            max_pages = (len(self.history_data) - 1) // self.history_entries_per_page
+            self.history_page = (self.history_page + 1) % (max_pages + 1)
+
+        self.display.fill(0)
+
+        self.display.text("History", 0, 0, 1)
+
+        # Calculate start and end indices for current page
+        start_idx = self.history_page * self.history_entries_per_page
+        end_idx = min(start_idx + self.history_entries_per_page, len(self.history_data))
+
+        # Display entries
+        y_pos = 16  # Start below title
+        for i in range(start_idx, end_idx):
+            entry = self.history_data[i]
+
+            # Format timestamp
+            timestamp = entry["TIMESTAMP"].split()[1]  # Get time part only
+
+            # Format heart rate and HRV metrics
+            hr_str = f"HR: {int(entry['MEAN HR'])} BPM"
+            hrv_str = f"RMSSD: {int(entry['RMSSD'])} ms"
+
+            # Display entry
+            self.display.text(timestamp, 0, y_pos, 1)
+            self.display.text(hr_str, 0, y_pos + 8, 1)
+            self.display.text(hrv_str, 0, y_pos + 16, 1)
+
+            y_pos += 24  # Move to next entry position
+
+        # Show navigation hint
+        if len(self.history_data) > self.history_entries_per_page:
+            page_str = f"Page {self.history_page + 1}/{(len(self.history_data) - 1) // self.history_entries_per_page + 1}"
+            self.display.text(page_str, 0, DISPLAY_HEIGHT_PX - 8, 1)
 
         self.display.show()
 
