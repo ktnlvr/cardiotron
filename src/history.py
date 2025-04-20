@@ -148,7 +148,7 @@ def read_data():
 def test_store_mock_data():
     """
     Temporary test function to store mock Kubios response data.
-    This function reads a mock JSON file and passes it to store_data().
+    This function creates mock data and passes it to store_data().
     """
     try:
         # Ensure the history directory exists
@@ -158,28 +158,27 @@ def test_store_mock_data():
             uos.mkdir(HISTORY_DATA_FOLDER)
             log("Created history directory")
 
-        # Create a mock Kubios response file if it doesn't exist
-        mock_file_path = "./examples/measurements.txt"
-        try:
-            with open(mock_file_path, "r") as f:
-                mock_data = f.read()
-        except OSError:
-            # Create mock data if file doesn't exist
-            mock_data = """[
-                {
-                    "TIMESTAMP": "2023-04-18 14:30:00",
-                    "TIMEZONE": "UTC",
-                    "MEAN HR": 75,
-                    "MEAN PPI": 800,
-                    "RMSSD": 45,
-                    "SDNN": 65,
-                    "SNS": 30,
-                    "PNS": 70
-                },
-            ]"""
-            with open(mock_file_path, "w") as f:
-                f.write(mock_data)
-            log("Created mock Kubios response file")
+        # Create mock data directly
+        mock_data = """[{
+        "TIMESTAMP":"2023-04-18 14:30:00",
+        "TIMEZONE":"UTC",
+        "MEAN HR":75,
+        "MEAN PPI":800,
+        "RMSSD":45,
+        "SDNN":65,
+        "SNS":30,
+        "PNS":70
+        },
+        {
+        "TIMESTAMP":"2023-04-19 14:30:00",
+        "TIMEZONE":"UTC",
+        "MEAN HR":75,
+        "MEAN PPI":800,
+        "RMSSD":45,
+        "SDNN":65,
+        "SNS":30,
+        "PNS":70
+        }]"""
 
         # Store the mock data
         result = store_data(mock_data)
