@@ -327,7 +327,7 @@ class Machine(HAL):
 
     def history(self):
         """
-        Display heart rate history with navigation
+        Display heart rate history page
         """
         if self.is_first_frame:
             self.history_data = read_data()
@@ -348,19 +348,19 @@ class Machine(HAL):
                 self.display.show()
                 return
 
-            # Use toast for better navigation
-            self.state(self._history_entry(self.history_page))
+            # Use toast as navigation method
+            self.state(self.history_entry(self.history_page))
             return
 
         # If not first frame, just show the main menu
         self.state(self.main_menu)
 
-    def _history_entry(self, index):
+    def history_entry(self, index):
         """
         Display a single history entry with navigation
         """
 
-        def _history_entry_state():
+        def history_entry_state():
             if self.button_long():
                 # Go back to main menu
                 self.state(self.main_menu)
@@ -369,7 +369,7 @@ class Machine(HAL):
             if self.button_short():
                 # Go to next entry
                 next_index = (index + 1) % len(self.history_data)
-                self.state(self._history_entry(next_index))
+                self.state(self.history_entry(next_index))
                 return
 
             # Display the entry
@@ -408,7 +408,7 @@ class Machine(HAL):
 
             self.display.show()
 
-        return _history_entry_state
+        return history_entry_state
 
     def toast(self, message, previous_state=None, next_state=None):
         lines = message.split("\n")

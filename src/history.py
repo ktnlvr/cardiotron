@@ -152,7 +152,7 @@ def test_store_mock_data():
             log("Created history directory")
 
         # Create a mock Kubios response file if it doesn't exist
-        mock_file_path = "mock_kubios_response.txt"
+        mock_file_path = "./examples/measurements.txt"
         try:
             with open(mock_file_path, "r") as f:
                 mock_data = f.read()
@@ -169,16 +169,6 @@ def test_store_mock_data():
                     "SNS": 30,
                     "PNS": 70
                 },
-                {
-                    "TIMESTAMP": "2023-04-18 15:45:00",
-                    "TIMEZONE": "UTC",
-                    "MEAN HR": 82,
-                    "MEAN PPI": 730,
-                    "RMSSD": 38,
-                    "SDNN": 55,
-                    "SNS": 40,
-                    "PNS": 60
-                }
             ]"""
             with open(mock_file_path, "w") as f:
                 f.write(mock_data)
