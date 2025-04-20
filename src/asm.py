@@ -381,8 +381,19 @@ class Machine(HAL):
             # Get the entry
             entry = self.history_data[index]
 
-            # Format timestamp
-            timestamp = entry["TIMESTAMP"].split()[1]  # Get time part only
+            # Format timestamp - convert to "dd/mm"
+            timestamp_parts = entry["TIMESTAMP"].split()
+            if len(timestamp_parts) >= 2:
+                date_parts = timestamp_parts[0].split("-")
+                if len(date_parts) >= 3:
+                    # Format as "dd/mm"
+                    formatted_date = f"{date_parts[1]}/{date_parts[2]}"
+                    timestamp = f"{formatted_date} {timestamp_parts[1]}"
+
+                else:
+                    timestamp = entry["TIMESTAMP"]
+            else:
+                timestamp = entry["TIMESTAMP"]
 
             # Format heart rate and HRV metrics
             hr_str = f"HR: {int(entry['MEAN HR'])} BPM"
