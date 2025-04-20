@@ -356,14 +356,31 @@ class Machine(HAL):
         # Display the list of entries
         self.display.fill(0)
 
-        # Show title
-        self.display.text("Measurement Data", 0, 0, 1)
+        # Show exactly 5 entries at a time
+        entries_per_screen = 5
+        total_entries = len(self.history_data)
 
-        # Show current entry and surrounding entries
-        current_idx = self.history_count
-        start_idx = max(0, current_idx - 2)
-        end_idx = min(len(self.history_data), current_idx + 3)
+        # Calculate the window of entries to show
+        if total_entries <= entries_per_screen:
+            # If we have 5 or fewer entries, show all of them
+            start_idx = 0
+            end_idx = total_entries
+        else:
+            # Calculate the window position to keep the selected entry in view
+            if self.history_count < 2:
+                # Near the start, show first 5
+                start_idx = 0
+                end_idx = entries_per_screen
+            elif self.history_count >= total_entries - 2:
+                # Near the end, show last 5
+                start_idx = total_entries - entries_per_screen
+                end_idx = total_entries
+            else:
+                # In the middle, keep selected entry in middle of window
+                start_idx = self.history_count - 2
+                end_idx = start_idx + entries_per_screen
 
+        # Display the entries
         for i, idx in enumerate(range(start_idx, end_idx)):
             entry = self.history_data[idx]
 
@@ -384,18 +401,25 @@ class Machine(HAL):
             else:
                 timestamp = entry["TIMESTAMP"]
 
-            # Show entry with selection indicator
-            y_pos = 8 + (i * 8)
-            if idx == current_idx:  # Selected entry
-                self.display.text(">", 0, y_pos, 1)
-            self.display.text(timestamp, 8, y_pos, 1)
+            # Calculate position for this entry
+            y_pos = 12 + (i * 12)  # Increased spacing from 8 to 12 pixels
+
+            # Draw the entry with appropriate styling
+            if idx == self.history_count:
+                # For selected entry, draw inverted background
+                self.display.fill_rect(0, y_pos, DISPLAY_WIDTH_PX, 10, 1)
+                # Draw text in inverted color
+                self.display.text(timestamp, 8, y_pos, 0)
+            else:
+                # For non-selected entries, draw normal text
+                self.display.text(timestamp, 8, y_pos, 1)
 
         self.display.show()
 
         # Handle button press
         if self.button_short():
             # Show selected entry details
-            self.state(self._history_entry(current_idx))
+            self.state(self._history_entry(self.history_count))
             return
 
         if self.button_long():
