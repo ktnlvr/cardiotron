@@ -44,7 +44,7 @@ from network import (
     STAT_CONNECT_FAIL,
 )
 from secrets import secrets
-from history import store_data, read_data
+from history import store_data, read_data, test_store_mock_data
 
 
 class Machine(HAL):
@@ -336,13 +336,29 @@ class Machine(HAL):
             return
 
         if self.button_short():
-            # Cycle through pages by single click
+            # If no data exists, try to load mock data
+            if not self.history_data:
+                if test_store_mock_data():
+                    self.history_data = read_data()
+                    return
+
+            # Cycle through pages
             max_pages = (len(self.history_data) - 1) // self.history_entries_per_page
             self.history_page = (self.history_page + 1) % (max_pages + 1)
 
+        # Clear display
         self.display.fill(0)
 
+        # Show title
         self.display.text("History", 0, 0, 1)
+
+        # If no data, show a message
+        if not self.history_data:
+            self.display.text("No history data", 0, 16, 1)
+            self.display.text("Press button to", 0, 32, 1)
+            self.display.text("load test data", 0, 40, 1)
+            self.display.show()
+            return
 
         # Calculate start and end indices for current page
         start_idx = self.history_page * self.history_entries_per_page

@@ -3,7 +3,12 @@ import ujson
 import urequests
 from time import localtime
 from logging import log, eth_log
-from constants import HISTORY_DATA_FILENAME, HISTORY_DATA_FOLDER
+from constants import (
+    HISTORY_DATA_FILENAME,
+    HISTORY_DATA_FOLDER,
+    KUBIOS_FIELDS,
+    NUMERIC_FIELDS,
+)
 
 
 def fetch_kubios_data(api_url, headers):
@@ -36,26 +41,26 @@ def store_data(json_data):
         if not isinstance(data, list):
             raise ValueError("Expected JSON array")
 
-        required_fields = [
-            "TIMESTAMP",
-            "TIMEZONE",
-            "MEAN HR",
-            "MEAN PPI",
-            "RMSSD",
-            "SDNN",
-            "SNS",
-            "PNS",
-        ]
-
         # Validate data structure
         for entry in data:
-            if not all(field in entry for field in required_fields):
+            if not all(field in entry for field in KUBIOS_FIELDS):
                 raise ValueError("Missing required fields")
 
             # Validate numeric fields
-            for field in ["MEAN HR", "MEAN PPI", "RMSSD", "SDNN", "SNS", "PNS"]:
+            for field in NUMERIC_FIELDS:
                 if not isinstance(entry[field], (int, float)):
                     raise ValueError(f"Invalid numeric value for {field}")
+
+        existing_data = read_data()
+
+        # Merge new data with existing data (avoid duplicates)
+        existing_timestamps = {entry["TIMESTAMP"] for entry in existing_data}
+        for entry in data:
+            if entry["TIMESTAMP"] not in existing_timestamps:
+                existing_data.append(entry)
+
+        # Sort by timestamp (newest first)
+        existing_data.sort(key=lambda x: x[KUBIOS_FIELDS[0]], reverse=True)
 
         # Ensure hr_data folder exists
         try:
@@ -66,27 +71,15 @@ def store_data(json_data):
 
         # Write data to file, assuming JSON data is newest-first
         with open(HISTORY_DATA_FILENAME, "w") as f:
-            for entry in data:
-                line = ",".join(
-                    [
-                        entry["TIMESTAMP"],
-                        entry["TIMEZONE"],
-                        str(entry["MEAN HR"]),
-                        str(entry["MEAN PPI"]),
-                        str(entry["RMSSD"]),
-                        str(entry["SDNN"]),
-                        str(entry["SNS"]),
-                        str(entry["PNS"]),
-                    ]
-                )
+            for entry in existing_data:
+                line = ",".join(str(entry[field]) for field in KUBIOS_FIELDS)
                 f.write(line + "\n")
 
-        log(f"Successfully stored {len(data)} entries in history")
+        log(
+            f"Successfully stored {len(data)} new entries, total {len(existing_data)} entries"
+        )
         return True
 
-    except ujson.JSONDecodeError as e:
-        eth_log(f"JSON parsing error: {str(e)}")
-        return False
     except ValueError as e:
         eth_log(f"Data validation error: {str(e)}")
         return False
@@ -101,33 +94,45 @@ def read_data():
     """
     data = []
     try:
-        with open(HISTORY_DATA_FILENAME, "r") as f:
-            for line_num, line in enumerate(f, 1):
-                try:
-                    values = line.strip().split(",")
-                    if len(values) != 8:
+        # Check if the directory exists first
+        try:
+            uos.listdir(HISTORY_DATA_FOLDER)
+        except OSError:
+            # Directory doesn't exist, return empty list
+            log("History directory doesn't exist yet")
+            return data
+
+        # Check if the file exists
+        try:
+            with open(HISTORY_DATA_FILENAME, "r") as f:
+                for line_num, line in enumerate(f, 1):
+                    try:
+                        values = line.strip().split(",")
+                        if len(values) != len(KUBIOS_FIELDS):
+                            eth_log(
+                                f"Skipping malformed line {line_num} in history file: {line.strip()}"
+                            )
+                            continue
+
+                        entry = {}
+                        for i, field in enumerate(KUBIOS_FIELDS):
+                            if field in NUMERIC_FIELDS:
+                                entry[field] = float(values[i])
+                            else:
+                                entry[field] = values[i]
+                        data.append(entry)
+                    except (ValueError, IndexError):
                         eth_log(
-                            f"Skipping malformed line {line_num}: incorrect number of fields"
+                            f"Skipping malformed line {line_num} in history file: {line.strip()}"
                         )
                         continue
-
-                    entry = {
-                        "TIMESTAMP": values[0],
-                        "TIMEZONE": values[1],
-                        "MEAN HR": float(values[2]),
-                        "MEAN PPI": float(values[3]),
-                        "RMSSD": float(values[4]),
-                        "SDNN": float(values[5]),
-                        "SNS": float(values[6]),
-                        "PNS": float(values[7]),
-                    }
-                    data.append(entry)
-                except (ValueError, IndexError) as e:
-                    eth_log(f"Error parsing line {line_num}: {str(e)}")
-                    continue
+        except OSError:
+            # File doesn't exist, return empty list
+            log("History file doesn't exist yet")
+            return data
 
         log(f"Successfully read {len(data)} entries from history")
-    except OSError as e:
+    except Exception as e:
         eth_log(f"Error reading history file: {str(e)}")
 
     return data
@@ -139,6 +144,13 @@ def test_store_mock_data():
     This function reads a mock JSON file and passes it to store_data().
     """
     try:
+        # Ensure the history directory exists
+        try:
+            uos.listdir(HISTORY_DATA_FOLDER)
+        except OSError:
+            uos.mkdir(HISTORY_DATA_FOLDER)
+            log("Created history directory")
+
         # Create a mock Kubios response file if it doesn't exist
         mock_file_path = "mock_kubios_response.txt"
         try:
