@@ -339,15 +339,6 @@ class Machine(HAL):
                 if test_store_mock_data():
                     self.history_data = read_data()
 
-            # If still no data, show a message
-            if not self.history_data:
-                self.display.fill(0)
-                self.display.text("No history data", 0, 16, 1)
-                self.display.text("Press button to", 0, 32, 1)
-                self.display.text("load test data", 0, 40, 1)
-                self.display.show()
-                return
-
             # Sort data by timestamp (newest first)
             self.history_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
 
@@ -366,7 +357,7 @@ class Machine(HAL):
         self.display.fill(0)
 
         # Show title
-        self.display.text("History", 0, 0, 1)
+        self.display.text("Measurement Data", 0, 0, 1)
 
         # Show current entry and surrounding entries
         current_idx = self.history_count
