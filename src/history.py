@@ -5,6 +5,7 @@ from time import localtime
 from logging import log, eth_log
 from constants import HISTORY_DATA_FILENAME, HISTORY_DATA_FOLDER
 
+
 def fetch_kubios_data(api_url, headers):
     """
     Fetch data from Kubios API
@@ -17,9 +18,7 @@ def fetch_kubios_data(api_url, headers):
             log("Successfully fetched data from Kubios API")
             return response.text
         else:
-            eth_log(
-                f"Kubios API request failed: {response.status_code}"
-            )
+            eth_log(f"Kubios API request failed: {response.status_code}")
             return None
 
     except Exception as e:
@@ -132,3 +131,55 @@ def read_data():
         eth_log(f"Error reading history file: {str(e)}")
 
     return data
+
+
+def test_store_mock_data():
+    """
+    Temporary test function to store mock Kubios response data.
+    This function reads a mock JSON file and passes it to store_data().
+    """
+    try:
+        # Create a mock Kubios response file if it doesn't exist
+        mock_file_path = "mock_kubios_response.txt"
+        try:
+            with open(mock_file_path, "r") as f:
+                mock_data = f.read()
+        except OSError:
+            # Create mock data if file doesn't exist
+            mock_data = """[
+                {
+                    "TIMESTAMP": "2023-04-18 14:30:00",
+                    "TIMEZONE": "UTC",
+                    "MEAN HR": 75,
+                    "MEAN PPI": 800,
+                    "RMSSD": 45,
+                    "SDNN": 65,
+                    "SNS": 30,
+                    "PNS": 70
+                },
+                {
+                    "TIMESTAMP": "2023-04-18 15:45:00",
+                    "TIMEZONE": "UTC",
+                    "MEAN HR": 82,
+                    "MEAN PPI": 730,
+                    "RMSSD": 38,
+                    "SDNN": 55,
+                    "SNS": 40,
+                    "PNS": 60
+                }
+            ]"""
+            with open(mock_file_path, "w") as f:
+                f.write(mock_data)
+            log("Created mock Kubios response file")
+
+        # Store the mock data
+        result = store_data(mock_data)
+        if result:
+            log("Successfully stored mock Kubios data")
+        else:
+            eth_log("Failed to store mock Kubios data")
+
+        return result
+    except Exception as e:
+        eth_log(f"Error in test_store_mock_data: {str(e)}")
+        return False
