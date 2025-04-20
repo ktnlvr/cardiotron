@@ -170,7 +170,17 @@ def test_store_mock_data():
         "PNS":70
         },
         {
-        "TIMESTAMP":"2023-04-19 14:30:00",
+        "TIMESTAMP":"2023-04-18 15:30:00",
+        "TIMEZONE":"UTC",
+        "MEAN HR":75,
+        "MEAN PPI":800,
+        "RMSSD":45,
+        "SDNN":65,
+        "SNS":30,
+        "PNS":70
+        },
+        {
+        "TIMESTAMP":"2023-04-18 16:30:00",
         "TIMEZONE":"UTC",
         "MEAN HR":75,
         "MEAN PPI":800,

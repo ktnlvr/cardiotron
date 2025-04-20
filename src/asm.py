@@ -103,7 +103,7 @@ class Machine(HAL):
         self.wlan_connecting_ongoing = None
 
         self.history_data = []
-        self.history_page = 0
+        self.history_count = 0
         self.history_entries_per_page = HISTORY_ENTRIES_PER_PAGE
         self.heart_animation_time = time.time()
 
@@ -327,11 +327,11 @@ class Machine(HAL):
 
     def history(self):
         """
-        Display heart rate history page
+        Display heart rate history page with rotary navigation
         """
         if self.is_first_frame:
             self.history_data = read_data()
-            self.history_page = 0
+            self.history_count = 0
             self.heart_animation_time = time.time()
 
             # If no data exists, try to load mock data
@@ -348,48 +348,104 @@ class Machine(HAL):
                 self.display.show()
                 return
 
-            # Use toast as navigation method
-            self.state(self.history_entry(self.history_page))
+            # Sort data by timestamp (newest first)
+            self.history_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
+
+        # Handle rotary input using percentage
+        rotation_percent = self.rotary_motion_percentage()
+        if abs(rotation_percent) > 0.5:  # Threshold for entry change
+            # Update selected entry based on rotation direction
+            if rotation_percent > 0:
+                self.history_count = (self.history_count - 1) % len(self.history_data)
+            else:
+                self.history_count = (self.history_count + 1) % len(self.history_data)
+            self.is_first_frame = True
             return
 
-        # If not first frame, just show the main menu
-        self.state(self.main_menu)
+        # Display the list of entries
+        self.display.fill(0)
 
-    def history_entry(self, index):
+        # Show title
+        self.display.text("History", 0, 0, 1)
+
+        # Show current entry and surrounding entries
+        current_idx = self.history_count
+        start_idx = max(0, current_idx - 2)
+        end_idx = min(len(self.history_data), current_idx + 3)
+
+        for i, idx in enumerate(range(start_idx, end_idx)):
+            entry = self.history_data[idx]
+
+            # Format timestamp to "dd/mm/yy hh:mm"
+            timestamp_parts = entry["TIMESTAMP"].split()
+            if len(timestamp_parts) >= 2:
+                date_parts = timestamp_parts[0].split("-")
+                time_parts = timestamp_parts[1].split(":")
+                if len(date_parts) >= 3 and len(time_parts) >= 2:
+                    # Format as "dd/mm/yy hh:mm"
+                    formatted_date = (
+                        f"{date_parts[2]}/{date_parts[1]}/{date_parts[0][2:]}"
+                    )
+                    formatted_time = f"{time_parts[0]}:{time_parts[1]}"
+                    timestamp = f"{formatted_date} {formatted_time}"
+                else:
+                    timestamp = entry["TIMESTAMP"]
+            else:
+                timestamp = entry["TIMESTAMP"]
+
+            # Show entry with selection indicator
+            y_pos = 8 + (i * 8)
+            if idx == current_idx:  # Selected entry
+                self.display.text(">", 0, y_pos, 1)
+            self.display.text(timestamp, 8, y_pos, 1)
+
+        self.display.show()
+
+        # Handle button press
+        if self.button_short():
+            # Show selected entry details
+            self.state(self._history_entry(current_idx))
+            return
+
+        if self.button_long():
+            self.state(self.main_menu)
+            return
+
+    def _history_entry(self, index):
         """
         Display a single history entry with navigation
         """
 
-        def history_entry_state():
+        def _history_entry_state():
             if self.button_long():
-                # Go back to main menu
-                self.state(self.main_menu)
+                # Go back to history list
+                self.state(self.history)
                 return
 
             if self.button_short():
                 # Go to next entry
                 next_index = (index + 1) % len(self.history_data)
-                self.state(self.history_entry(next_index))
+                self.state(self._history_entry(next_index))
                 return
 
             # Display the entry
             self.display.fill(0)
 
-            # Show title with entry number
-            self.display.text(f"History {index+1}/{len(self.history_data)}", 0, 0, 1)
-
             # Get the entry
             entry = self.history_data[index]
 
-            # Format timestamp - convert to "dd/mm"
+            # Format timestamp to "dd/mm/yy hh:mm"
             timestamp_parts = entry["TIMESTAMP"].split()
             if len(timestamp_parts) >= 2:
                 date_parts = timestamp_parts[0].split("-")
-                if len(date_parts) >= 3:
-                    # Format as "dd/mm"
-                    formatted_date = f"{date_parts[1]}/{date_parts[2]}"
-                    timestamp = f"{formatted_date} {timestamp_parts[1]}"
-
+                time_parts = timestamp_parts[1].split(":")
+                if len(date_parts) >= 3 and len(time_parts) >= 2:
+                    # Format as "dd/mm/yy hh:mm"
+                    formatted_date = (
+                        f"{date_parts[2]}/{date_parts[1]}/{date_parts[0][2:]}"
+                    )
+                    formatted_time = f"{time_parts[0]}:{time_parts[1]}"
+                    timestamp = f"{formatted_date} {formatted_time}"
                 else:
                     timestamp = entry["TIMESTAMP"]
             else:
@@ -404,13 +460,13 @@ class Machine(HAL):
             pns_str = f"PNS: {entry['PNS']:.1f}"
 
             # Display entry
-            self.display.text(timestamp, 0, 8, 1)
-            self.display.text(hr_str, 0, 16, 1)
-            self.display.text(ppi_str, 0, 24, 1)
-            self.display.text(rmssd_str, 0, 32, 1)
-            self.display.text(sdnn_str, 0, 40, 1)
-            self.display.text(sns_str, 0, 48, 1)
-            self.display.text(pns_str, 0, 56, 1)
+            # self.display.text(timestamp, 0, 0, 1)
+            self.display.text(hr_str, 0, 8, 1)
+            self.display.text(ppi_str, 0, 16, 1)
+            self.display.text(rmssd_str, 0, 24, 1)
+            self.display.text(sdnn_str, 0, 32, 1)
+            self.display.text(sns_str, 0, 40, 1)
+            self.display.text(pns_str, 0, 48, 1)
 
             # Update and draw the heart animation
             self.heart_animation_time = update_heart_animation(
@@ -419,7 +475,7 @@ class Machine(HAL):
 
             self.display.show()
 
-        return history_entry_state
+        return _history_entry_state
 
     def toast(self, message, previous_state=None, next_state=None):
         lines = message.split("\n")
