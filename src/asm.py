@@ -45,6 +45,7 @@ from network import (
 )
 from secrets import secrets
 from history import store_data, read_data, test_store_mock_data
+from heart_ui import update_heart_animation
 
 
 class Machine(HAL):
@@ -104,6 +105,7 @@ class Machine(HAL):
         self.history_data = []
         self.history_page = 0
         self.history_entries_per_page = HISTORY_ENTRIES_PER_PAGE
+        self.heart_animation_time = time.time()
 
     def main_menu(self):
         self.main_menu_ui.tick()
@@ -330,65 +332,83 @@ class Machine(HAL):
         if self.is_first_frame:
             self.history_data = read_data()
             self.history_page = 0
+            self.heart_animation_time = time.time()
 
-        if self.button_long():
-            self.state(self.main_menu)
-            return
-
-        if self.button_short():
             # If no data exists, try to load mock data
             if not self.history_data:
                 if test_store_mock_data():
                     self.history_data = read_data()
-                    return
 
-            # Cycle through pages
-            max_pages = (len(self.history_data) - 1) // self.history_entries_per_page
-            self.history_page = (self.history_page + 1) % (max_pages + 1)
+            # If still no data, show a message
+            if not self.history_data:
+                self.display.fill(0)
+                self.display.text("No history data", 0, 16, 1)
+                self.display.text("Press button to", 0, 32, 1)
+                self.display.text("load test data", 0, 40, 1)
+                self.display.show()
+                return
 
-        # Clear display
-        self.display.fill(0)
-
-        # Show title
-        self.display.text("History", 0, 0, 1)
-
-        # If no data, show a message
-        if not self.history_data:
-            self.display.text("No history data", 0, 16, 1)
-            self.display.text("Press button to", 0, 32, 1)
-            self.display.text("load test data", 0, 40, 1)
-            self.display.show()
+            # Use toast for better navigation
+            self.state(self._history_entry(self.history_page))
             return
 
-        # Calculate start and end indices for current page
-        start_idx = self.history_page * self.history_entries_per_page
-        end_idx = min(start_idx + self.history_entries_per_page, len(self.history_data))
+        # If not first frame, just show the main menu
+        self.state(self.main_menu)
 
-        # Display entries
-        y_pos = 16  # Start below title
-        for i in range(start_idx, end_idx):
-            entry = self.history_data[i]
+    def _history_entry(self, index):
+        """
+        Display a single history entry with navigation
+        """
+
+        def _history_entry_state():
+            if self.button_long():
+                # Go back to main menu
+                self.state(self.main_menu)
+                return
+
+            if self.button_short():
+                # Go to next entry
+                next_index = (index + 1) % len(self.history_data)
+                self.state(self._history_entry(next_index))
+                return
+
+            # Display the entry
+            self.display.fill(0)
+
+            # Show title with entry number
+            self.display.text(f"History {index+1}/{len(self.history_data)}", 0, 0, 1)
+
+            # Get the entry
+            entry = self.history_data[index]
 
             # Format timestamp
             timestamp = entry["TIMESTAMP"].split()[1]  # Get time part only
 
             # Format heart rate and HRV metrics
             hr_str = f"HR: {int(entry['MEAN HR'])} BPM"
-            hrv_str = f"RMSSD: {int(entry['RMSSD'])} ms"
+            ppi_str = f"PPI: {int(entry['MEAN PPI'])} ms"
+            rmssd_str = f"RMSSD: {int(entry['RMSSD'])} ms"
+            sdnn_str = f"SDNN: {int(entry['SDNN'])} ms"
+            sns_str = f"SNS: {entry['SNS']:.1f}"
+            pns_str = f"PNS: {entry['PNS']:.1f}"
 
             # Display entry
-            self.display.text(timestamp, 0, y_pos, 1)
-            self.display.text(hr_str, 0, y_pos + 8, 1)
-            self.display.text(hrv_str, 0, y_pos + 16, 1)
+            self.display.text(timestamp, 0, 8, 1)
+            self.display.text(hr_str, 0, 16, 1)
+            self.display.text(ppi_str, 0, 24, 1)
+            self.display.text(rmssd_str, 0, 32, 1)
+            self.display.text(sdnn_str, 0, 40, 1)
+            self.display.text(sns_str, 0, 48, 1)
+            self.display.text(pns_str, 0, 56, 1)
 
-            y_pos += 24  # Move to next entry position
+            # Update and draw the heart animation
+            self.heart_animation_time = update_heart_animation(
+                self.display, self.heart_animation_time
+            )
 
-        # Show navigation hint
-        if len(self.history_data) > self.history_entries_per_page:
-            page_str = f"Page {self.history_page + 1}/{(len(self.history_data) - 1) // self.history_entries_per_page + 1}"
-            self.display.text(page_str, 0, DISPLAY_HEIGHT_PX - 8, 1)
+            self.display.show()
 
-        self.display.show()
+        return _history_entry_state
 
     def toast(self, message, previous_state=None, next_state=None):
         lines = message.split("\n")
