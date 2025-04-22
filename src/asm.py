@@ -148,6 +148,10 @@ class Machine(HAL):
         corrected_mean = compute_corrected_mean(mean_window, mean)
 
         filtered_sample = float(value)
+        if self.filtered_samples:
+            filtered_sample = low_pass_filter(
+                self.last_filtered_sample, filtered_sample
+            )
 
         dy = filtered_sample - self.last_filtered_sample
 
@@ -159,10 +163,6 @@ class Machine(HAL):
                 self.heart_rate_screen_samples.end
             )
 
-        if self.filtered_samples:
-            filtered_sample = low_pass_filter(
-                self.last_filtered_sample, filtered_sample
-            )
         mean_window.append(filtered_sample)
 
         current_time_ms = time.ticks_ms()
