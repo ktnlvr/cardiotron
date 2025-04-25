@@ -1,5 +1,8 @@
 import uos
 import ujson
+import json
+import urandom
+import time
 from logging import log, eth_log
 from constants import (
     HISTORY_DATA_FILENAME,
@@ -159,45 +162,52 @@ def read_data():
     return data
 
 
-def test_store_mock_data():
+# random integer generator
+def randrange(a, b):
+    return a + urandom.getrandbits(8) % (b - a + 1)
+
+
+def test_store_mock_data(start_tuple, days=5, hours_per_day=8):
     """
     Temporary test function to store mock Kubios response data.
+    if data is already stored, it will not be overwritten.
     """
+    mock_data = []
     try:
-        # Create mock data directly
-        mock_data = """[{
-        "TIMESTAMP":"2023-04-18 14:30:00",
-        "TIMEZONE":"UTC",
-        "MEAN HR":75,
-        "MEAN PPI":800,
-        "RMSSD":45,
-        "SDNN":65,
-        "SNS":30,
-        "PNS":70
-        },
-        {
-        "TIMESTAMP":"2023-04-18 15:30:00",
-        "TIMEZONE":"UTC",
-        "MEAN HR":70,
-        "MEAN PPI":855,
-        "RMSSD":45,
-        "SDNN":65,
-        "SNS":30,
-        "PNS":70
-        },
-        {
-        "TIMESTAMP":"2023-04-18 16:30:00",
-        "TIMEZONE":"UTC",
-        "MEAN HR":65,
-        "MEAN PPI":810,
-        "RMSSD":45,
-        "SDNN":65,
-        "SNS":30,
-        "PNS":70
-        }]"""
+        for day in range(days):
+            for hour in range(9, 9 + hours_per_day):
+                t = (
+                    start_tuple[0],
+                    start_tuple[1],
+                    start_tuple[2] + day,
+                    hour,
+                    0,
+                    0,
+                    0,
+                    0,
+                )
+                seconds = time.mktime(t)
+                local_time = time.localtime(seconds)
+                timestamp = "{:04d}-{:02d}-{:02d} {:02d}:00:00".format(
+                    local_time[0], local_time[1], local_time[2], local_time[3]
+                )
+                entry = {
+                    "TIMESTAMP": timestamp,
+                    "TIMEZONE": "UTC",
+                    "MEAN HR": randrange(65, 85),
+                    "MEAN PPI": randrange(750, 950),
+                    "RMSSD": randrange(35, 55),
+                    "SDNN": randrange(50, 75),
+                    "SNS": randrange(25, 35),
+                    "PNS": randrange(60, 80),
+                }
+                mock_data.append(entry)
+
+        # Convert the list to a JSON string
+        json_data = ujson.dumps(mock_data)
 
         # Store the mock data
-        result = store_data(mock_data)
+        result = store_data(json_data)
         if result:
             log("Successfully stored mock Kubios data")
         else:

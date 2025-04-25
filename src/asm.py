@@ -336,7 +336,8 @@ class Machine(HAL):
 
             # If no data exists, try to load mock data
             if not self.history_data:
-                if test_store_mock_data():
+                start_tuple = (2025, 4, 21, 9, 0, 0, 0, 0)
+                if test_store_mock_data(start_tuple):
                     self.history_data = read_data()
                 else:
                     self.display.text("No data", 0, 12, 1)
