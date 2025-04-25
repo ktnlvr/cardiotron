@@ -1,6 +1,5 @@
 import uos
 import ujson
-import json
 import urandom
 import time
 from logging import log, eth_log
