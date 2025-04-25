@@ -46,6 +46,7 @@ from network import (
 from secrets import secrets
 from history import store_data, read_data, test_store_mock_data
 from heart_ui import update_heart_animation
+from history_ui import HistoryUi
 
 
 class Machine(HAL):
@@ -327,7 +328,7 @@ class Machine(HAL):
 
     def history(self):
         """
-        Display heart rate history page with rotary navigation
+        Display heart rate history page with custom rotary navigation
         """
         if self.is_first_frame:
             self.history_data = read_data()
@@ -343,86 +344,15 @@ class Machine(HAL):
                     self.display.text("No data", 0, 12, 1)
                     return
 
-        data_len = len(self.history_data)
-        # Handle rotary input using percentage
-        rotation_percent = self.rotary_motion_percentage()
-        if abs(rotation_percent) > 0.5:  # Threshold for entry change
-            # Update selected entry based on rotation direction
-            if rotation_percent > 0:
-                self.history_count = (self.history_count - 1) % data_len
-            else:
-                self.history_count = (self.history_count + 1) % data_len
-            self.is_first_frame = True
-            return
+            # Create the history UI
+            self.history_ui = HistoryUi(self, self.history_data, self.history_count)
 
-        # Display the list of entries
-        self.display.fill(0)
+        # Use the history UI's tick method for navigation
+        next_state = self.history_ui.history_tick()
 
-        # Display title "History:"
-        self.display.text("History:", 0, 0, 1)
-        # Display page number (current/total)
-        total_entries = data_len
-        if total_entries > 0:
-            current_page = self.history_count + 1
-            page_text = f"{current_page}/{total_entries}"
-            # Position the page number at the top right
-            page_width = len(page_text) * 8  # Approximate width of text
-            self.display.text(page_text, DISPLAY_WIDTH_PX - page_width, 0, 1)
-        else:
-            self.display.text("0/0", 0, 0, 1)
-
-        # Show 5 entries at a time
-        entries_per_screen = 5
-        total_entries = data_len
-        # still thinking there si issue
-        # Calculate the window of entries to show
-        if total_entries <= entries_per_screen:
-            # If we have 5 or fewer entries, show all of them
-            start_idx = 0
-            end_idx = total_entries
-        else:
-            # Calculate the window position to keep the selected entry in view
-            if self.history_count < 2:
-                # Near the start, show first 5
-                start_idx = 0
-                end_idx = entries_per_screen
-            elif self.history_count >= total_entries - 2:
-                # Near the end, show last 5
-                start_idx = total_entries - entries_per_screen
-                end_idx = total_entries
-            else:
-                # In the middle, keep selected entry in middle of window
-                start_idx = self.history_count - 2
-                end_idx = start_idx + entries_per_screen
-
-        # Display the entries
-        for i, idx in enumerate(range(start_idx, end_idx)):
-            entry = self.history_data[idx]
-            timestamp = entry["TIMESTAMP"]  # Already formatted in read_data
-
-            # Calculate position for this entry
-            y_pos = 12 + (i * 12)  # Increased spacing from 8 to 12 pixels
-
-            # Draw the entry with appropriate styling
-            if idx == self.history_count:
-                # For selected entry, draw inverted background
-                self.display.fill_rect(0, y_pos, DISPLAY_WIDTH_PX, 10, 1)
-                # Draw text in inverted color
-                self.display.text(timestamp, 8, y_pos, 0)
-            else:
-                # For non-selected entries, draw normal text
-                self.display.text(timestamp, 8, y_pos, 1)
-
-        self.display.show()
-
-        # Show selected entry details
-        if self.button_short():
-            self.state(self._history_entry(self.history_count))
-            return
-
-        # Return to main
-        if self.button_long():
-            self.state(self.main_menu)
+        # If the tick method returns a state function, transition to it
+        if next_state:
+            self.state(next_state)
             return
 
     def _history_entry(self, index):
@@ -438,6 +368,7 @@ class Machine(HAL):
 
             if self.button_short():
                 # Go to next entry
+                data_len = len(self.history_data)
                 next_index = (index + 1) % data_len
                 self.state(self._history_entry(next_index))
                 return
