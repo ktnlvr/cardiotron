@@ -27,7 +27,6 @@ from constants import (
     MAX_NO_PEAK_INTERVAL_MS,
     PPI_SIZE,
     DEFAULT_MQTT_SERVER_ADDR,
-    HISTORY_ENTRIES_PER_PAGE,
 )
 from time import localtime
 from math import tau, sin, cos
@@ -100,11 +99,6 @@ class Machine(HAL):
         self.last_dy = 0
 
         self.wlan_connecting_ongoing = None
-
-        self.history_data = []
-        self.history_count = 0
-        self.history_entries_per_page = HISTORY_ENTRIES_PER_PAGE
-        self.heart_animation_time = time.time()
 
     def main_menu(self):
         self.main_menu_ui.tick()
