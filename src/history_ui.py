@@ -1,4 +1,6 @@
 from constants import DISPLAY_WIDTH_PX
+from heart_ui import update_heart_animation
+import time
 
 
 class HistoryUi:
@@ -9,10 +11,74 @@ class HistoryUi:
         self.selected_row = 0  # 0-3 for rows 1-4
         self.entries_per_screen = 4  # Show 4 entries at a time
         self.first_frame = True
+        self.heart_animation_time = time.time()
 
     @property
     def display(self):
         return self.hal.display
+
+    def history_entry_tick(self, index):
+        """
+        Handle display and navigation for a single history entry
+        Args:
+            index: Index of the entry to display
+        Returns:
+            function: Next state to transition to, or None to stay in current state
+        """
+        if self.hal.button_long():
+            # Go back to history list
+            return self.hal.history
+
+        if self.hal.button_short():
+            # Go to next entry
+            data_len = len(self.history_data)
+            next_index = (index + 1) % data_len
+            # Return a function that will be called to transition to the next entry
+            return lambda: self.hal._history_entry(next_index)
+
+        # Display the entry
+        self.display.fill(0)
+
+        # Get the entry and reformat timestamp to dd/mm hh:mm
+        entry = self.history_data[index]
+        timestamp_parts = entry["TIMESTAMP"].split()
+        if len(timestamp_parts) >= 2:
+            date_parts = timestamp_parts[0].split("/")
+            time_parts = timestamp_parts[1].split(":")
+            if len(date_parts) >= 2 and len(time_parts) >= 2:
+                # Format as "dd/mm hh:mm"
+                formatted_date = f"{date_parts[0]}/{date_parts[1]}"
+                formatted_time = f"{time_parts[0]}:{time_parts[1]}"
+                timestamp = f"{formatted_date} {formatted_time}"
+                self.display.text(timestamp, 0, 0, 1)
+            else:
+                self.display.text(entry["TIMESTAMP"], 0, 0, 1)
+        else:
+            self.display.text(entry["TIMESTAMP"], 0, 0, 1)
+
+        # Format heart rate and HRV metrics
+        hr_str = f"HR: {int(entry['MEAN HR'])} BPM"
+        ppi_str = f"PPI: {int(entry['MEAN PPI'])} ms"
+        rmssd_str = f"RMSSD: {int(entry['RMSSD'])} ms"
+        sdnn_str = f"SDNN: {int(entry['SDNN'])} ms"
+        sns_str = f"SNS: {entry['SNS']:.1f}"
+        pns_str = f"PNS: {entry['PNS']:.1f}"
+
+        # Display entry
+        self.display.text(hr_str, 0, 8, 1)
+        self.display.text(ppi_str, 0, 16, 1)
+        self.display.text(rmssd_str, 0, 24, 1)
+        self.display.text(sdnn_str, 0, 32, 1)
+        self.display.text(sns_str, 0, 40, 1)
+        self.display.text(pns_str, 0, 48, 1)
+
+        # Update and draw the heart animation
+        self.heart_animation_time = update_heart_animation(
+            self.display, self.heart_animation_time
+        )
+
+        self.display.show()
+        return None
 
     def history_tick(self):
         """

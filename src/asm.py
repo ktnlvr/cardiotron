@@ -45,7 +45,7 @@ from network import (
 )
 from secrets import secrets
 from history import store_data, read_data, test_store_mock_data
-from heart_ui import update_heart_animation
+
 from history_ui import HistoryUi
 
 
@@ -361,64 +361,13 @@ class Machine(HAL):
         """
 
         def _history_entry_state():
-            if self.button_long():
-                # Go back to history list
-                self.state(self.history)
+            next_state = self.history_ui.history_entry_tick(index)
+            if next_state:
+                if callable(next_state):
+                    # call it to get the next state
+                    next_state = next_state()
+                self.state(next_state)
                 return
-
-            if self.button_short():
-                # Go to next entry
-                data_len = len(self.history_data)
-                next_index = (index + 1) % data_len
-                self.state(self._history_entry(next_index))
-                return
-
-            # Display the entry
-            self.display.fill(0)
-
-            # Get the entry
-            entry = self.history_data[index]
-
-            # Format timestamp to "dd/mm/yy hh:mm"
-            timestamp_parts = entry["TIMESTAMP"].split()
-            if len(timestamp_parts) >= 2:
-                date_parts = timestamp_parts[0].split("-")
-                time_parts = timestamp_parts[1].split(":")
-                if len(date_parts) >= 3 and len(time_parts) >= 2:
-                    # Format as "dd/mm/yy hh:mm"
-                    formatted_date = (
-                        f"{date_parts[2]}/{date_parts[1]}/{date_parts[0][2:]}"
-                    )
-                    formatted_time = f"{time_parts[0]}:{time_parts[1]}"
-                    timestamp = f"{formatted_date} {formatted_time}"
-                else:
-                    timestamp = entry["TIMESTAMP"]
-            else:
-                timestamp = entry["TIMESTAMP"]
-
-            # Format heart rate and HRV metrics
-            hr_str = f"HR: {int(entry['MEAN HR'])} BPM"
-            ppi_str = f"PPI: {int(entry['MEAN PPI'])} ms"
-            rmssd_str = f"RMSSD: {int(entry['RMSSD'])} ms"
-            sdnn_str = f"SDNN: {int(entry['SDNN'])} ms"
-            sns_str = f"SNS: {entry['SNS']:.1f}"
-            pns_str = f"PNS: {entry['PNS']:.1f}"
-
-            # Display entry
-            # self.display.text(timestamp, 0, 0, 1)
-            self.display.text(hr_str, 0, 8, 1)
-            self.display.text(ppi_str, 0, 16, 1)
-            self.display.text(rmssd_str, 0, 24, 1)
-            self.display.text(sdnn_str, 0, 32, 1)
-            self.display.text(sns_str, 0, 40, 1)
-            self.display.text(pns_str, 0, 48, 1)
-
-            # Update and draw the heart animation
-            self.heart_animation_time = update_heart_animation(
-                self.display, self.heart_animation_time
-            )
-
-            self.display.show()
 
         return _history_entry_state
 
