@@ -1,5 +1,6 @@
 from constants import DISPLAY_WIDTH_PX
 from heart_ui import update_heart_animation
+from history import read_data, test_store_mock_data
 import time
 
 
@@ -13,6 +14,24 @@ class HistoryUi:
         self.first_frame = True
         self.heart_animation_time = time.time()
 
+    def initialize(self):
+        """
+        Initialize history data and load mock data if needed
+        Returns:
+            bool: True if initialization successful, False otherwise
+        """
+        # If no data exists, try to load mock data
+        if not self.history_data:
+            start_tuple = (2025, 4, 21, 9, 0, 0, 0, 0)
+            if test_store_mock_data(start_tuple):
+                self.history_data = read_data()
+                return True
+            else:
+                self.display.text("No data", 0, 12, 1)
+                return False
+
+        return True
+
     @property
     def display(self):
         return self.hal.display
@@ -23,18 +42,17 @@ class HistoryUi:
         Args:
             index: Index of the entry to display
         Returns:
-            function: Next state to transition to, or None to stay in current state
+            int: Next index to display, or None to stay in current state
         """
         if self.hal.button_long():
             # Go back to history list
-            return self.hal.history
+            return -1  # Special value to indicate return to history list
 
         if self.hal.button_short():
             # Go to next entry
             data_len = len(self.history_data)
             next_index = (index + 1) % data_len
-            # Return a function that will be called to transition to the next entry
-            return lambda: self.hal._history_entry(next_index)
+            return next_index
 
         # Display the entry
         self.display.fill(0)

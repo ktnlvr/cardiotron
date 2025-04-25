@@ -44,8 +44,6 @@ from network import (
     STAT_CONNECT_FAIL,
 )
 from secrets import secrets
-from history import store_data, read_data, test_store_mock_data
-
 from history_ui import HistoryUi
 
 
@@ -331,21 +329,10 @@ class Machine(HAL):
         Display heart rate history page with custom rotary navigation
         """
         if self.is_first_frame:
-            self.history_data = read_data()
-            self.history_count = 0
-            self.heart_animation_time = time.time()
-
-            # If no data exists, try to load mock data
-            if not self.history_data:
-                start_tuple = (2025, 4, 21, 9, 0, 0, 0, 0)
-                if test_store_mock_data(start_tuple):
-                    self.history_data = read_data()
-                else:
-                    self.display.text("No data", 0, 12, 1)
-                    return
-
-            # Create the history UI
-            self.history_ui = HistoryUi(self, self.history_data, self.history_count)
+            # Create the history UI and initialize data
+            self.history_ui = HistoryUi(self, [], 0)
+            if not self.history_ui.initialize():
+                return
 
         # Use the history UI's tick method for navigation
         next_state = self.history_ui.history_tick()
@@ -361,12 +348,14 @@ class Machine(HAL):
         """
 
         def _history_entry_state():
-            next_state = self.history_ui.history_entry_tick(index)
-            if next_state:
-                if callable(next_state):
-                    # call it to get the next state
-                    next_state = next_state()
-                self.state(next_state)
+            next_index = self.history_ui.history_entry_tick(index)
+            if next_index is not None:
+                if next_index == -1:
+                    # Return to history list
+                    self.state(self.history)
+                else:
+                    # Go to next entry
+                    self.state(self._history_entry(next_index))
                 return
 
         return _history_entry_state
