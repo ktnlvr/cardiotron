@@ -338,28 +338,42 @@ class Machine(HAL):
             if not self.history_data:
                 if test_store_mock_data():
                     self.history_data = read_data()
+                else:
+                    self.display.text("No data", 0, 12, 1)
+                    return
 
-            # Sort data by timestamp (newest first)
-            self.history_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
-
+        data_len = len(self.history_data)
         # Handle rotary input using percentage
         rotation_percent = self.rotary_motion_percentage()
         if abs(rotation_percent) > 0.5:  # Threshold for entry change
             # Update selected entry based on rotation direction
             if rotation_percent > 0:
-                self.history_count = (self.history_count - 1) % len(self.history_data)
+                self.history_count = (self.history_count - 1) % data_len
             else:
-                self.history_count = (self.history_count + 1) % len(self.history_data)
+                self.history_count = (self.history_count + 1) % data_len
             self.is_first_frame = True
             return
 
         # Display the list of entries
         self.display.fill(0)
 
-        # Show exactly 5 entries at a time
-        entries_per_screen = 5
-        total_entries = len(self.history_data)
+        # Display title "History:"
+        self.display.text("History:", 0, 0, 1)
+        # Display page number (current/total)
+        total_entries = data_len
+        if total_entries > 0:
+            current_page = self.history_count + 1
+            page_text = f"{current_page}/{total_entries}"
+            # Position the page number at the top right
+            page_width = len(page_text) * 8  # Approximate width of text
+            self.display.text(page_text, DISPLAY_WIDTH_PX - page_width, 0, 1)
+        else:
+            self.display.text("0/0", 0, 0, 1)
 
+        # Show 5 entries at a time
+        entries_per_screen = 5
+        total_entries = data_len
+        # still thinking there si issue
         # Calculate the window of entries to show
         if total_entries <= entries_per_screen:
             # If we have 5 or fewer entries, show all of them
@@ -383,23 +397,7 @@ class Machine(HAL):
         # Display the entries
         for i, idx in enumerate(range(start_idx, end_idx)):
             entry = self.history_data[idx]
-
-            # Format timestamp to "dd/mm/yy hh:mm"
-            timestamp_parts = entry["TIMESTAMP"].split()
-            if len(timestamp_parts) >= 2:
-                date_parts = timestamp_parts[0].split("-")
-                time_parts = timestamp_parts[1].split(":")
-                if len(date_parts) >= 3 and len(time_parts) >= 2:
-                    # Format as "dd/mm/yy hh:mm"
-                    formatted_date = (
-                        f"{date_parts[2]}/{date_parts[1]}/{date_parts[0][2:]}"
-                    )
-                    formatted_time = f"{time_parts[0]}:{time_parts[1]}"
-                    timestamp = f"{formatted_date} {formatted_time}"
-                else:
-                    timestamp = entry["TIMESTAMP"]
-            else:
-                timestamp = entry["TIMESTAMP"]
+            timestamp = entry["TIMESTAMP"]  # Already formatted in read_data
 
             # Calculate position for this entry
             y_pos = 12 + (i * 12)  # Increased spacing from 8 to 12 pixels
@@ -416,12 +414,12 @@ class Machine(HAL):
 
         self.display.show()
 
-        # Handle button press
+        # Show selected entry details
         if self.button_short():
-            # Show selected entry details
             self.state(self._history_entry(self.history_count))
             return
 
+        # Return to main
         if self.button_long():
             self.state(self.main_menu)
             return
@@ -439,7 +437,7 @@ class Machine(HAL):
 
             if self.button_short():
                 # Go to next entry
-                next_index = (index + 1) % len(self.history_data)
+                next_index = (index + 1) % data_len
                 self.state(self._history_entry(next_index))
                 return
 

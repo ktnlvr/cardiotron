@@ -1,7 +1,5 @@
 import uos
 import ujson
-import urequests
-from time import localtime
 from logging import log, eth_log
 from constants import (
     HISTORY_DATA_FILENAME,
@@ -42,13 +40,14 @@ def store_data(json_data):
     """
     Parse JSON data from Kubios and store it in hr_data/data.txt.
     Each line is a comma-separated entry with newest data at the top.
+    Timestamps are formatted as "dd/mm/yy hh:mm".
     """
     try:
         data = ujson.loads(json_data)
         if not isinstance(data, list):
             raise ValueError("Expected JSON array")
 
-        # Validate data structure
+        # Validate data structure and format timestamps
         for entry in data:
             if not all(field in entry for field in KUBIOS_FIELDS):
                 raise ValueError("Missing required fields")
@@ -57,6 +56,20 @@ def store_data(json_data):
             for field in NUMERIC_FIELDS:
                 if not isinstance(entry[field], (int, float)):
                     raise ValueError(f"Invalid numeric value for {field}")
+
+            # Format timestamp to "dd/mm/yy hh:mm"
+            if "TIMESTAMP" in entry:
+                timestamp_parts = entry["TIMESTAMP"].split()
+                if len(timestamp_parts) >= 2:
+                    date_parts = timestamp_parts[0].split("-")
+                    time_parts = timestamp_parts[1].split(":")
+                    if len(date_parts) >= 3 and len(time_parts) >= 2:
+                        # Format as "dd/mm/yy hh:mm"
+                        formatted_date = (
+                            f"{date_parts[2]}/{date_parts[1]}/{date_parts[0][2:]}"
+                        )
+                        formatted_time = f"{time_parts[0]}:{time_parts[1]}"
+                        entry["TIMESTAMP"] = f"{formatted_date} {formatted_time}"
 
         existing_data = read_data()
 
@@ -67,7 +80,7 @@ def store_data(json_data):
                 existing_data.append(entry)
 
         # Sort by timestamp (newest first)
-        existing_data.sort(key=lambda x: x[KUBIOS_FIELDS[0]], reverse=True)
+        existing_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
 
         # Ensure hr_data folder exists
         try:
@@ -76,7 +89,7 @@ def store_data(json_data):
             uos.mkdir(HISTORY_DATA_FOLDER)
             log("Created hr_data directory")
 
-        # Write data to file, assuming JSON data is newest-first
+        # Write data to file as newest-first
         with open(HISTORY_DATA_FILENAME, "w") as f:
             for entry in existing_data:
                 line = ",".join(str(entry[field]) for field in KUBIOS_FIELDS)
@@ -127,6 +140,7 @@ def read_data():
                                 entry[field] = float(values[i])
                             else:
                                 entry[field] = values[i]
+
                         data.append(entry)
                     except (ValueError, IndexError):
                         eth_log(
@@ -148,16 +162,8 @@ def read_data():
 def test_store_mock_data():
     """
     Temporary test function to store mock Kubios response data.
-    This function creates mock data and passes it to store_data().
     """
     try:
-        # Ensure the history directory exists
-        try:
-            uos.listdir(HISTORY_DATA_FOLDER)
-        except OSError:
-            uos.mkdir(HISTORY_DATA_FOLDER)
-            log("Created history directory")
-
         # Create mock data directly
         mock_data = """[{
         "TIMESTAMP":"2023-04-18 14:30:00",
@@ -172,8 +178,8 @@ def test_store_mock_data():
         {
         "TIMESTAMP":"2023-04-18 15:30:00",
         "TIMEZONE":"UTC",
-        "MEAN HR":75,
-        "MEAN PPI":800,
+        "MEAN HR":70,
+        "MEAN PPI":855,
         "RMSSD":45,
         "SDNN":65,
         "SNS":30,
@@ -182,8 +188,8 @@ def test_store_mock_data():
         {
         "TIMESTAMP":"2023-04-18 16:30:00",
         "TIMEZONE":"UTC",
-        "MEAN HR":75,
-        "MEAN PPI":800,
+        "MEAN HR":65,
+        "MEAN PPI":810,
         "RMSSD":45,
         "SDNN":65,
         "SNS":30,
