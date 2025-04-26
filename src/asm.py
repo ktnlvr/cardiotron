@@ -43,6 +43,7 @@ from network import (
     STAT_CONNECT_FAIL,
 )
 from secrets import secrets
+from history_ui import HistoryUi
 
 
 class Machine(HAL):
@@ -71,7 +72,7 @@ class Machine(HAL):
             self,
             [
                 ("Measure", s(self.measure_heart_rate)),
-                ("History", s(self.toast("History"))),
+                ("History", s(self.history)),
                 ("Setup", s(self.connecting_wifi)),
                 ("Settings", s(self.settings)),
             ],
@@ -316,6 +317,42 @@ class Machine(HAL):
             )
 
         self.display.show()
+
+    def history(self):
+        """
+        Display heart rate history page with custom rotary navigation
+        """
+        if self.is_first_frame:
+            # Create the history UI and initialize data
+            self.history_ui = HistoryUi(self, [], 0)
+            if not self.history_ui.initialize():
+                return
+
+        # Use the history UI's tick method for navigation
+        next_state = self.history_ui.history_tick()
+
+        # If the tick method returns a state function, transition to it
+        if next_state:
+            self.state(next_state)
+            return
+
+    def _history_entry(self, index):
+        """
+        Display a single history entry with navigation
+        """
+
+        def _history_entry_state():
+            next_index = self.history_ui.history_entry_tick(index)
+            if next_index is not None:
+                if next_index == -1:
+                    # Return to history list
+                    self.state(self.history)
+                else:
+                    # Go to next entry
+                    self.state(self._history_entry(next_index))
+                return
+
+        return _history_entry_state
 
     def toast(self, message, previous_state=None, next_state=None):
         lines = message.split("\n")

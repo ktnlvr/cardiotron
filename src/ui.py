@@ -55,7 +55,7 @@ class Ui:
             if i == self.selected_option:
                 self.display.fill_rect(
                     text_x,
-                    text_y - UI_OPTION_GAP // 2,
+                    text_y - UI_OPTION_GAP // 2 + 1,
                     option_label_width,
                     CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP // 2,
                     color,
