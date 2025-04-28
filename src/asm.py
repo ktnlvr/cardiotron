@@ -532,7 +532,7 @@ class Machine(HAL):
             return
         else:
             self.wlan_connecting_ongoing = None
-            raise Exception("Unhandled WLAN status!")
+            raise Exception(f"Unhandled WLAN status! {wlan_status}")
 
         time.sleep(1)
 
