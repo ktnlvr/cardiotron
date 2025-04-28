@@ -96,11 +96,7 @@ class HAL:
         self.rotary_reset_timer_ms = ticks_ms()
         self.rotary_accumulator += 1 if self.rotary_b() else -1
 
-        increment = False
-        threshold_hit = abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY
-        increment |= threshold_hit
-
-        if increment:
+        if abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY:
             self.rotary_motion_queue += -1 if self.rotary_accumulator > 0 else 1
 
             rotary_accumulator = self.rotary_accumulator
