@@ -34,16 +34,9 @@ from ringbuffer import Ringbuffer
 from machine import Timer
 import math
 from collections import OrderedDict
-from wifi import connect_ap
-from network import (
-    STAT_CONNECTING,
-    STAT_NO_AP_FOUND,
-    STAT_GOT_IP,
-    STAT_WRONG_PASSWORD,
-    STAT_CONNECT_FAIL,
-)
-from secrets import secrets
-from history_ui import HistoryUi
+import networker
+import framebuf
+from logging import eth_log
 
 
 class Machine(HAL):
@@ -54,6 +47,7 @@ class Machine(HAL):
         super().__init__(self.main_menu)
 
         s = self.go_to_state
+        self.network_manager = networker.NetworkManager(button_long_check_func=self.button_long)
 
         self.brightness_slider_b = 0xFF
         self.settings_ui = Ui(
@@ -62,6 +56,7 @@ class Machine(HAL):
                 ("Brightness", s(self.brightness)),
                 ("Invert", self.invert_display),
                 ("Clock", s(self.clock)),
+                ("Network", s(self.network_settings)),
             ],
             s(self.main_menu),
         )
@@ -72,10 +67,27 @@ class Machine(HAL):
             self,
             [
                 ("Measure", s(self.measure_heart_rate)),
-                ("History", s(self.history)),
-                ("Setup", s(self.connecting_wifi)),
+                ("History", s(self.toast("History"))),
+                ("Setup", s(self.setup)),
                 ("Settings", s(self.settings)),
             ],
+        )
+
+        self.wifi_setup_ui = Ui(
+            self,
+            [
+                ("Start Setup", s(self.network_run_portal)),
+            ],
+            s(self.main_menu)
+        )
+
+        self.network_settings_ui = Ui(
+            self,
+            [
+                ("Status/Connect", s(self.network_connect_or_status)),
+                ("Disconnect", s(self.network_disconnect)),
+            ],
+            s(self.settings)
         )
 
         self.heart_rate = 0
@@ -98,10 +110,9 @@ class Machine(HAL):
         self.last_filtered_sample = 0
         self.last_dy = 0
 
-        self.wlan_connecting_ongoing = None
-
     def main_menu(self):
         self.main_menu_ui.tick()
+        self.request_redraw()
 
     def _reset_heart_measurements(self):
         self.heart_rate_graph_y = DISPLAY_HEIGHT_PX - 1
@@ -149,10 +160,6 @@ class Machine(HAL):
         corrected_mean = compute_corrected_mean(mean_window, mean)
 
         filtered_sample = float(value)
-        if self.filtered_samples:
-            filtered_sample = low_pass_filter(
-                self.last_filtered_sample, filtered_sample
-            )
 
         dy = filtered_sample - self.last_filtered_sample
 
@@ -164,6 +171,10 @@ class Machine(HAL):
                 self.heart_rate_screen_samples.end
             )
 
+        if self.filtered_samples:
+            filtered_sample = low_pass_filter(
+                self.last_filtered_sample, filtered_sample
+            )
         mean_window.append(filtered_sample)
 
         current_time_ms = time.ticks_ms()
@@ -318,42 +329,6 @@ class Machine(HAL):
 
         self.display.show()
 
-    def history(self):
-        """
-        Display heart rate history page with custom rotary navigation
-        """
-        if self.is_first_frame:
-            # Create the history UI and initialize data
-            self.history_ui = HistoryUi(self, [], 0)
-            if not self.history_ui.initialize():
-                return
-
-        # Use the history UI's tick method for navigation
-        next_state = self.history_ui.history_tick()
-
-        # If the tick method returns a state function, transition to it
-        if next_state:
-            self.state(next_state)
-            return
-
-    def _history_entry(self, index):
-        """
-        Display a single history entry with navigation
-        """
-
-        def _history_entry_state():
-            next_index = self.history_ui.history_entry_tick(index)
-            if next_index is not None:
-                if next_index == -1:
-                    # Return to history list
-                    self.state(self.history)
-                else:
-                    # Go to next entry
-                    self.state(self._history_entry(next_index))
-                return
-
-        return _history_entry_state
-
     def toast(self, message, previous_state=None, next_state=None):
         lines = message.split("\n")
 
@@ -493,64 +468,70 @@ class Machine(HAL):
                 1,
             )
 
-    def connecting_wifi(self):
-        ssid = secrets["ssid"]
-        if not self.wlan_connecting_ongoing:
-            self.wlan_connecting_ongoing = connect_ap(self.wlan, ssid)
+    def setup(self):
+        self.wifi_setup_ui.tick()
+        self.request_redraw()
 
-        wlan_status = None
-        try:
-            wlan_status = next(self.wlan_connecting_ongoing)
-        except StopIteration:
-            pass
+    def network_settings(self):
+        self.network_settings_ui.tick()
+        self.request_redraw()
 
-        if self.button():
-            self.state(self.main_menu)
-
-        text = "Connecting..."
-
+    def network_connect_or_status(self):
         self.display.fill(0)
-        self.display.text(text, 0, 0, 1)
-        self.request_redraw()
-
-        if wlan_status != STAT_CONNECTING:
-            self.wlan_connecting_ongoing = None
-
-        if wlan_status == STAT_GOT_IP:
-            self.state(self.wifi_connected)
-            return
-        elif wlan_status == STAT_NO_AP_FOUND:
-            self.state(self.toast(f"Couldn't\nconnect to\n{ssid}"))
-            return
-        elif wlan_status == STAT_WRONG_PASSWORD:
-            self.state(self.toast(f"Wrong password!"))
-            return
-        elif wlan_status == STAT_CONNECTING:
-            text = "Connecting..."
-        elif wlan_status == STAT_CONNECT_FAIL:
-            self.state(self.toast("Connection\nfailed, check\ncredentials"))
-            return
+        self.display.text("Connecting...", UI_MARGIN, UI_MARGIN)
+        self.display.show()
+        time.sleep(0.1) # Allow display update
+        eth_log("Attempting connection from status/connect...") # Added log
+        success = self.network_manager.connect()
+        time.sleep(1) # Add delay here
+        
+        is_now_connected = self.network_manager.is_connected()
+        if is_now_connected:
+            ip = self.network_manager.get_ip_address()
+            self.state(self.toast(f"Connected!\nIP: {ip if ip else 'N/A'}", previous_state=self.network_settings, next_state=self.network_settings))
         else:
-            self.wlan_connecting_ongoing = None
-            raise Exception("Unhandled WLAN status!")
+            self.state(self.toast("Connection\nFailed", previous_state=self.network_settings, next_state=self.network_settings))
 
-        time.sleep(1)
+    def network_disconnect(self):
+        self.network_manager.disconnect()
+        self.state(self.toast("Disconnected", previous_state=self.network_settings, next_state=self.network_settings))
 
-        self.display.text(text, 0, 0, 1)
-        self.request_redraw()
-
-    def wifi_connected(self):
-        if self.button():
+    def network_run_portal(self):
+        if self.button_long():
+            self.network_manager.stop_portal()
             self.state(self.main_menu)
+            return
 
         if not self.is_first_frame:
+            if self.network_manager._portal_instance is not None:
+                pass
+            else:
+                self.display.fill(0)
+                self.display.text("Connecting...", UI_MARGIN, UI_MARGIN)
+                self.display.show()
+                time.sleep(0.1)
+
+                success = self.network_manager.connect()
+                if success:
+                    ip = self.network_manager.get_ip_address() or "N/A"
+                    self.state(self.toast(f"Setup\nsuccessful!", previous_state=self.main_menu, next_state=self.main_menu))
+                else:
+                    self.state(self.toast("Couldn't\nconnect", previous_state=self.main_menu, next_state=self.main_menu))
             return
 
         self.display.fill(0)
-        ipv4, *_ = self.wlan.ifconfig()
+        self.display.text("Scan the", 1, UI_MARGIN)
+        self.display.text("QR", 1, UI_MARGIN + CHAR_SIZE_HEIGHT_PX)
+        self.display.text("Hold to", 1, UI_MARGIN + CHAR_SIZE_HEIGHT_PX * 4)
+        self.display.text("return", 1, UI_MARGIN + CHAR_SIZE_HEIGHT_PX * 5)
 
-        self.display.text("Connected!", 0, 0, 1)
-        self.display.text(ipv4, 0, CHAR_SIZE_HEIGHT_PX, 1)
-        self.request_redraw()
+        with open('/net/qr.pbm', 'rb') as f:
+            f.readline()
+            f.readline()
+            f.readline()
+            data = bytearray(f.read())
+            fb = framebuf.FrameBuffer(data, 58, 58, framebuf.MONO_HLSB)
 
-        self.connect_mqtt(DEFAULT_MQTT_SERVER_ADDR)
+        self.display.blit(fb, DISPLAY_WIDTH_PX - 58 - UI_MARGIN, UI_MARGIN)
+        self.display.show()
+        self.network_manager.start_portal()
