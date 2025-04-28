@@ -92,6 +92,8 @@ class Machine(HAL):
         self.heart_rate_last_peak_ms = None
         self.heart_rate_ppis_ms = []
         self.heart_rate = 0
+        self.rmssd = 0
+        self.sdnn = 0
 
         self.heart_rate_first_sane_peak_ms = 0
 
@@ -131,6 +133,9 @@ class Machine(HAL):
 
         if self.button_short():
             self.set_heart_sensor_active(False)
+            self._send_data_to_kubios(
+                self.heart_rate_ppis_ms, self.heart_rate, self.rmssd, self.sdnn
+            )
             self.state(self.display_heart_rate_analysis)
 
         if self.is_first_frame:
@@ -279,7 +284,7 @@ class Machine(HAL):
 
         mean_hr = 60000 / mean_ppi if mean_ppi != 0 else 0
 
-        sdnn = (
+        self.sdnn = (
             math.sqrt(
                 sum((ppi - mean_ppi) ** 2 for ppi in self.heart_rate_ppis_ms)
                 / len(self.heart_rate_ppis_ms)
@@ -293,7 +298,7 @@ class Machine(HAL):
             for i in range(len(self.heart_rate_ppis_ms) - 1)
         ]
 
-        rmssd = (
+        self.rmssd = (
             math.sqrt(sum(diff**2 for diff in successive_diffs) / len(successive_diffs))
             if successive_diffs
             else 0
@@ -303,8 +308,8 @@ class Machine(HAL):
             [
                 ("Mean HR", f"{round(mean_hr)}"),
                 ("Mean PPI", f"{round(mean_ppi)}"),
-                ("SDNN", f"{sdnn:.2f}"),
-                ("rMSSD", f"{rmssd:.2f}"),
+                ("SDNN", f"{self.sdnn:.2f}"),
+                ("rMSSD", f"{self.rmssd:.2f}"),
             ]
         )
 
@@ -538,6 +543,8 @@ class Machine(HAL):
 
         self.display.text(text, 0, 0, 1)
         self.request_redraw()
+
+    def on_receive_kubios_response(self, response): ...
 
     def wifi_connected(self):
         if self.button():

@@ -63,7 +63,6 @@ class HAL:
 
         self.wlan = make_wlan()
         self.mqtt_client = None
-        self.mqtt_message_queue = []
         self.mqtt_client_id = None
 
     def _rotary_knob_press(self, _):
@@ -221,8 +220,23 @@ class HAL:
 
     @staticmethod
     def flush_files():
+
         # Micropython-specific function
         os.sync()  # type: ignore
+
+    def _send_data_to_kubios(self, ppis: list[int], mean_hr, rmssd, sdnn):
+        payload_id = localtime_string()
+
+        mean_ppi = sum(ppis) / len(ppis)
+
+        payload = {
+            "id": 0,
+            "type": "RRI",
+            "data": ppis,
+            "analysis": {"type": "readiness"},
+        }
+
+        self.mqtt_client.publish("kubios-request", json.dumps(payload))
 
     def on_receive_kubios_response(self, response):
         eth_log(f"HAL.on_receive_kubios_response not overriden. Response: {response}")
