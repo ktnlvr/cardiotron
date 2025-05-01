@@ -134,7 +134,7 @@ class Machine(HAL):
         if self.button_short():
             self.set_heart_sensor_active(False)
             self._send_data_to_kubios(
-                self.heart_rate_ppis_ms, self.heart_rate, self.rmssd, self.sdnn
+                self.heart_rate_ppis_ms,
             )
             self.state(self.display_heart_rate_analysis)
 

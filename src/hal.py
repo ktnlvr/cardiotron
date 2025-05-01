@@ -224,11 +224,7 @@ class HAL:
         # Micropython-specific function
         os.sync()  # type: ignore
 
-    def _send_data_to_kubios(self, ppis: list[int], mean_hr, rmssd, sdnn):
-        payload_id = localtime_string()
-
-        mean_ppi = sum(ppis) / len(ppis)
-
+    def _send_data_to_kubios(self, ppis: list[int]):
         payload = {
             "id": 0,
             "type": "RRI",
