@@ -11,33 +11,6 @@ from constants import (
 )
 
 
-def fetch_kubios_data(file_path=None):
-    """
-    Read Kubios data from a local JSON file.
-    """
-    try:
-        # Use default path if none provided
-        if file_path is None:
-            file_path = "kubios_data.json"
-
-        log(f"Reading Kubios data from file: {file_path}")
-
-        # Check if the file exists
-        try:
-            with open(file_path, "r") as f:
-                json_data = f.read()
-
-            log("Successfully read Kubios data from file")
-            return json_data
-        except OSError:
-            eth_log(f"File not found: {file_path}")
-            return None
-
-    except Exception as e:
-        eth_log(f"Error reading Kubios data from file: {str(e)}")
-        return None
-
-
 def store_data(json_data):
     """
     Parse JSON data from Kubios and store it in hr_data/data.txt.

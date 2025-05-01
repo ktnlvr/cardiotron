@@ -32,6 +32,9 @@ from umqtt.simple import MQTTClient
 # Hardware abstraction layer over the Pico W
 class HAL:
     def __init__(self, initial_state=lambda: None):
+        self._state_args = []
+        self._state_kwargs = {}
+
         self._state = initial_state
         self.onboard_led = Pin(PIN_SIGNAL_LED, Pin.OUT)
         self.sensor_pin_adc = ADC(Pin(PIN_SENSOR))
@@ -122,7 +125,7 @@ class HAL:
             return motion
         return 0
 
-    def state(self, new_state=None):
+    def state(self, new_state=None, *args, **kwargs):
         """
         Retrieve or set the current state.
         Triggers state cleanup such as garbage collection.
@@ -133,6 +136,9 @@ class HAL:
             gc_collect()
             self.flush_files()
             self.onboard_led.toggle()
+
+            self._state_args = args
+            self._state_kwargs = kwargs
             self._state = new_state
         return self._state
 
@@ -182,7 +188,7 @@ class HAL:
                 self.rotary_reset_timer_ms = 0
 
         running_state = self._state
-        running_state()
+        running_state(*self._state_args, **self._state_kwargs)
 
         switching_state = not (self._state is running_state)
         if switching_state:

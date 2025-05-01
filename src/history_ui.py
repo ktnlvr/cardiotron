@@ -1,4 +1,4 @@
-from constants import DISPLAY_WIDTH_PX
+from constants import DISPLAY_WIDTH_PX, CHAR_SIZE_WIDTH_PX
 from heart_ui import update_heart_animation
 from history import read_data, test_store_mock_data
 import time
@@ -6,7 +6,7 @@ import time
 
 class HistoryUi:
     def __init__(self, hal, history_data, history_count=0):
-        self.hal = hal
+        self.asm = hal
         self.history_data = history_data
         self.history_count = history_count
         self.selected_row = 0  # 0-3 for rows 1-4
@@ -14,7 +14,7 @@ class HistoryUi:
         self.first_frame = True
         self.heart_animation_time = time.time()
 
-    def initialize(self):
+    def fill_mock_data(self):
         """
         Initialize history data and load mock data if needed
         Returns:
@@ -34,7 +34,7 @@ class HistoryUi:
 
     @property
     def display(self):
-        return self.hal.display
+        return self.asm.display
 
     def history_entry_tick(self, index):
         """
@@ -44,17 +44,16 @@ class HistoryUi:
         Returns:
             int: Next index to display, or None to stay in current state
         """
-        if self.hal.button_long():
-            # Go back to history list
-            return -1  # Special value to indicate return to history list
+        if self.asm.button_long():
+            self.asm.state(self.asm.main_menu)
+            return
 
-        if self.hal.button_short():
-            # Go to next entry
-            data_len = len(self.history_data)
-            next_index = (index + 1) % data_len
-            return next_index
+        if self.asm.button_short():
+            # FIXME(Artur): after refactoring does not keep track of the selected index
+            self.asm.state(
+                self.asm.history,
+            )
 
-        # Display the entry
         self.display.fill(0)
 
         # Get the entry and reformat timestamp to dd/mm hh:mm
@@ -74,7 +73,6 @@ class HistoryUi:
         else:
             self.display.text(entry["TIMESTAMP"], 0, 0, 1)
 
-        # Format heart rate and HRV metrics
         hr_str = f"HR: {int(entry['MEAN HR'])} BPM"
         ppi_str = f"PPI: {int(entry['MEAN PPI'])} ms"
         rmssd_str = f"RMSSD: {int(entry['RMSSD'])} ms"
@@ -82,7 +80,6 @@ class HistoryUi:
         sns_str = f"SNS: {entry['SNS']:.1f}"
         pns_str = f"PNS: {entry['PNS']:.1f}"
 
-        # Display entry
         self.display.text(hr_str, 0, 8, 1)
         self.display.text(ppi_str, 0, 16, 1)
         self.display.text(rmssd_str, 0, 24, 1)
@@ -90,7 +87,6 @@ class HistoryUi:
         self.display.text(sns_str, 0, 40, 1)
         self.display.text(pns_str, 0, 48, 1)
 
-        # Update and draw the heart animation
         self.heart_animation_time = update_heart_animation(
             self.display, self.heart_animation_time
         )
@@ -105,29 +101,30 @@ class HistoryUi:
             - None: Continue in history view
             - function: State to transition to
         """
-        if self.hal.button_long():
-            return self.hal.main_menu
+        if self.asm.button_long():
+            self.asm.state(self.asm.main_menu)
+            return
 
-        if self.hal.button_short():
-            return self.hal._history_entry(self.history_count)
+        if self.asm.button_short():
+            self.asm.state(self.asm._history_entry, self.history_count)
+            return
 
         # Handle rotary input
-        rotary_motion = self.hal.pull_rotary()
+        rotary_motion = self.asm.pull_rotary()
 
         data_len = len(self.history_data)
         if data_len == 0:
             self._update_display(0, 0)  # Display empty state
-            return None
 
         # Calculate the current window of entries to show
         start_idx = max(0, self.history_count - self.selected_row)
         end_idx = min(data_len, start_idx + self.entries_per_screen)
 
-        if not rotary_motion and not self.hal.is_first_frame:
+        if not rotary_motion and not self.asm.is_first_frame:
             self._update_display(start_idx, end_idx)
-            return None
+            return
 
-        self.hal.is_first_frame = False
+        self.asm.is_first_frame = False
 
         # Handle rotary navigation
         if rotary_motion > 0:  # Clockwise rotation
@@ -166,8 +163,6 @@ class HistoryUi:
         # Update the display with the calculated indices
         self._update_display(start_idx, end_idx)
 
-        return None
-
     def _update_display(self, start_idx, end_idx):
         """Update the display with the current history entries"""
         self.display.fill(0)
@@ -176,14 +171,15 @@ class HistoryUi:
 
         # Display data number (current/total)
         data_len = len(self.history_data)
+        current_page_number = self.history_count + 1
+        page_text = f"{current_page_number}/{data_len}"
+
         if data_len > 0:
-            current_page = self.history_count + 1
-            page_text = f"{current_page}/{data_len}"
             # Position the number at the top right
-            page_width = len(page_text) * 8  # Approximate width of text
+            page_width = len(page_text) * CHAR_SIZE_WIDTH_PX
             self.display.text(page_text, DISPLAY_WIDTH_PX - page_width, 0, 1)
         else:
-            self.display.text("0/0", DISPLAY_WIDTH_PX - page_width, 0, 1)
+            self.display.text("0/0", DISPLAY_WIDTH_PX, 0, 1)
 
         # Display the entries
         for i, idx in enumerate(range(start_idx, end_idx)):
