@@ -261,13 +261,22 @@ class Machine(HAL):
         self.last_filtered_sample = filtered_sample
         self.last_dy = dy
 
+    def clear_buffer(self):
+        self.heart_rate_ppis_ms = []
+        self.heart_rate_mean_window.clear()
+        self.heart_rate_screen_samples.clear()
+        self.filtered_samples.clear()
+        self.heart_rate_samples.clear()
+
     def display_heart_rate_analysis(self):
         if self.button_short():
             self.state(self.main_menu)
+            self.clear_buffer()
             return
 
         if self.button_long():
             self.state(self.measure_heart_rate)
+            self.clear_buffer()
             return
 
         if not self.is_first_frame:
