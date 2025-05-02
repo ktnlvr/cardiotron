@@ -13,8 +13,9 @@ if major < 1 or major == 1 and minor < 25:
 
 from asm import Machine
 from logging import log
-
+import time
 import micropython
+import machine as mpy_machine
 
 micropython.alloc_emergency_exception_buf(100)
 
@@ -23,4 +24,13 @@ machine = Machine()
 log("Starting to do useful work!")
 
 while True:
-    machine.execute()
+    try:
+        machine.execute()
+    except Exception as e:
+        machine.display.fill(0)
+        machine.display.text("Error occurred:", 0, 0)
+        machine.display.text(str(e)[:16], 0, 10)
+        machine.display.show()
+        time.sleep(2)
+        log(str(e))
+        mpy_machine.reset()
