@@ -9,78 +9,111 @@ from constants import (
     KUBIOS_FIELDS,
     NUMERIC_FIELDS,
 )
+import re
 
 
-def store_data(json_data):
+def kubios_response_to_data(raw: dict) -> dict:
+    data = raw["data"]
+    assert data["status"] == "ok"
+
+    analysis = data["analysis"]
+    mean_hr = analysis["mean_hr_bpm"]
+    sdnn = analysis["sdnn_ms"]
+    rmssd = analysis["rmssd_ms"]
+    mean_ppi = analysis["mean_rr_ms"]
+    timestamp = analysis["create_timestamp"]
+    sns = analysis["sns_index"]
+    pns = analysis["pns_index"]
+
+    timestamp = f"0/0/0 20:30"
+
+    """
+    Convert the raw kubios response to the data format apt
+    for storage
+    """
+    out = {
+        "TIMESTAMP": timestamp,
+        "MEAN HR": mean_hr,
+        "MEAN PPI": mean_ppi,
+        "RMSSD": rmssd,
+        "SDNN": sdnn,
+        "SNS": sns,
+        "PNS": pns,
+    }
+
+    return out
+
+
+def push_data(data):
+    """
+    Push a single bit of data to be stored
+    """
+    return store_data([data])
+
+
+def store_data(list_of_dicts):
     """
     Parse JSON data from Kubios and store it in hr_data/data.txt.
     Each line is a comma-separated entry with newest data at the top.
     Timestamps are formatted as "dd/mm/yy hh:mm".
     """
+    if not isinstance(list_of_dicts, list):
+        raise ValueError("Expected a list of dicts, got a non-list")
+
+    data = list_of_dicts
+
+    # Validate data structure and format timestamps
+    for entry in data:
+        if not all(field in entry for field in KUBIOS_FIELDS):
+            raise ValueError("Missing required fields")
+
+        # Validate numeric fields
+        for field in NUMERIC_FIELDS:
+            if not isinstance(entry[field], (int, float)):
+                raise ValueError(f"Invalid numeric value for {field}")
+
+        # Format timestamp to "dd/mm/yy hh:mm"
+        if "TIMESTAMP" in entry:
+            timestamp_parts = entry["TIMESTAMP"].split()
+            if len(timestamp_parts) >= 2:
+                date_parts = timestamp_parts[0].split("-")
+                time_parts = timestamp_parts[1].split(":")
+                if len(date_parts) >= 3 and len(time_parts) >= 2:
+                    # Format as "dd/mm/yy hh:mm"
+                    formatted_date = (
+                        f"{date_parts[2]}/{date_parts[1]}/{date_parts[0][2:]}"
+                    )
+                    formatted_time = f"{time_parts[0]}:{time_parts[1]}"
+                    entry["TIMESTAMP"] = f"{formatted_date} {formatted_time}"
+
+    existing_data = read_data()
+
+    # Merge new data with existing data (avoid duplicates)
+    existing_timestamps = {entry["TIMESTAMP"] for entry in existing_data}
+    for entry in data:
+        if entry["TIMESTAMP"] not in existing_timestamps:
+            existing_data.append(entry)
+
+    # Sort by timestamp (newest first)
+    existing_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
+
+    # Ensure hr_data folder exists
     try:
-        data = ujson.loads(json_data)
-        if not isinstance(data, list):
-            raise ValueError("Expected JSON array")
+        uos.listdir(HISTORY_DATA_FOLDER)
+    except OSError:
+        uos.mkdir(HISTORY_DATA_FOLDER)
+        log("Created hr_data directory")
 
-        # Validate data structure and format timestamps
-        for entry in data:
-            if not all(field in entry for field in KUBIOS_FIELDS):
-                raise ValueError("Missing required fields")
+    # Write data to file as newest-first
+    with open(HISTORY_DATA_FILENAME, "w") as f:
+        for entry in existing_data:
+            line = ",".join(str(entry[field]) for field in KUBIOS_FIELDS)
+            f.write(line + "\n")
 
-            # Validate numeric fields
-            for field in NUMERIC_FIELDS:
-                if not isinstance(entry[field], (int, float)):
-                    raise ValueError(f"Invalid numeric value for {field}")
-
-            # Format timestamp to "dd/mm/yy hh:mm"
-            if "TIMESTAMP" in entry:
-                timestamp_parts = entry["TIMESTAMP"].split()
-                if len(timestamp_parts) >= 2:
-                    date_parts = timestamp_parts[0].split("-")
-                    time_parts = timestamp_parts[1].split(":")
-                    if len(date_parts) >= 3 and len(time_parts) >= 2:
-                        # Format as "dd/mm/yy hh:mm"
-                        formatted_date = (
-                            f"{date_parts[2]}/{date_parts[1]}/{date_parts[0][2:]}"
-                        )
-                        formatted_time = f"{time_parts[0]}:{time_parts[1]}"
-                        entry["TIMESTAMP"] = f"{formatted_date} {formatted_time}"
-
-        existing_data = read_data()
-
-        # Merge new data with existing data (avoid duplicates)
-        existing_timestamps = {entry["TIMESTAMP"] for entry in existing_data}
-        for entry in data:
-            if entry["TIMESTAMP"] not in existing_timestamps:
-                existing_data.append(entry)
-
-        # Sort by timestamp (newest first)
-        existing_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
-
-        # Ensure hr_data folder exists
-        try:
-            uos.listdir(HISTORY_DATA_FOLDER)
-        except OSError:
-            uos.mkdir(HISTORY_DATA_FOLDER)
-            log("Created hr_data directory")
-
-        # Write data to file as newest-first
-        with open(HISTORY_DATA_FILENAME, "w") as f:
-            for entry in existing_data:
-                line = ",".join(str(entry[field]) for field in KUBIOS_FIELDS)
-                f.write(line + "\n")
-
-        log(
-            f"Successfully stored {len(data)} new entries, total {len(existing_data)} entries"
-        )
-        return True
-
-    except ValueError as e:
-        eth_log(f"Data validation error: {str(e)}")
-        return False
-    except Exception as e:
-        eth_log(f"Error storing data: {str(e)}")
-        return False
+    log(
+        f"Successfully stored {len(data)} new entries, total {len(existing_data)} entries"
+    )
+    return True
 
 
 def read_data():
@@ -175,11 +208,8 @@ def test_store_mock_data(start_tuple, days=5, hours_per_day=8):
                 }
                 mock_data.append(entry)
 
-        # Convert the list to a JSON string
-        json_data = ujson.dumps(mock_data)
-
         # Store the mock data
-        result = store_data(json_data)
+        result = store_data(mock_data)
         if result:
             log("Successfully stored mock Kubios data")
         else:

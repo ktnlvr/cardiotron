@@ -244,18 +244,15 @@ class HAL:
         eth_log(f"HAL.on_receive_kubios_response not overriden. Response: {response}")
 
     def receive_mqtt_message(self, topic, content):
-        try:
-            topic = topic.decode()
-            content = content.decode()
-            if topic == self.mqtt_client_id:
-                eth_log(f"Targeted MQTT Message to {self.mqtt_client_id}: {content}")
-            elif topic == MQTT_TOPIC_KUBIOS_RESPONSE:
-                content_object = json.loads(content)
-                self.on_receive_kubios_response(content_object)
-            else:
-                eth_log(f"Dropped MQTT Message for topic {topic}: {content}")
-        except Exception as e:
-            eth_log(f"Failed when receiving an MQTT message: {e}")
+        topic = topic.decode()
+        content = content.decode()
+        if topic == self.mqtt_client_id:
+            eth_log(f"Targeted MQTT Message to {self.mqtt_client_id}: {content}")
+        elif topic == MQTT_TOPIC_KUBIOS_RESPONSE:
+            content_object = json.loads(content)
+            self.on_receive_kubios_response(content_object)
+        else:
+            eth_log(f"Dropped MQTT Message for topic {topic}: {content}")
 
     def connect_mqtt(self, server: str, port: int = DEFAULT_MQTT_PORT):
         self.mqtt_client_id = self.wlan.config("mac").hex()

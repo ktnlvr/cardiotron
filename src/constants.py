@@ -82,7 +82,6 @@ HISTORY_DATA_FILENAME = "hr_data/data.txt"
 HISTORY_DATA_FOLDER = "hr_data"
 KUBIOS_FIELDS = [
     "TIMESTAMP",
-    "TIMEZONE",
     "MEAN HR",
     "MEAN PPI",
     "RMSSD",

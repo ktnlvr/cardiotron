@@ -1,4 +1,5 @@
 from hal import HAL
+from history import kubios_response_to_data, push_data
 from ui import Ui
 import time
 from heart import (
@@ -530,7 +531,9 @@ class Machine(HAL):
         self.display.text(text, 0, 0, 1)
         self.request_redraw()
 
-    def on_receive_kubios_response(self, response): ...
+    def on_receive_kubios_response(self, response: dict):
+        data = kubios_response_to_data(response)
+        push_data(data)
 
     def wifi_connected(self):
         if self.button():
