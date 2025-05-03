@@ -72,16 +72,23 @@ def push_data(data):
 
     data["TIMESTAMP"] = data["TIMESTAMP"].replace("-", "/")
 
+    new_data = []
     existing_data = read_data()
-
     existing_ids = {entry["ID"] for entry in existing_data}
-    if data["ID"] not in existing_ids:
-        existing_data.append(data)
 
-    existing_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
+    print(data)
+    print(existing_ids)
+
+    for entry in existing_data:
+        if entry["ID"] == data["ID"]:
+            log(f"Entry with id {entry['ID']} already exists, replacing")
+            entry = data
+        new_data.append(entry)
+
+    new_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
 
     with open(HISTORY_DATA_FILENAME, "w") as f:
-        for entry in existing_data:
+        for entry in new_data:
             line = HISTORY_ENTRY_DATA_SEPARATOR.join(
                 f"{field}{HISTORY_ENTRY_KEY_VALUE_SEPARATOR}{str(entry[field])}"
                 for field in entry

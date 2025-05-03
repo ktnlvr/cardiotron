@@ -1,5 +1,5 @@
 from hal import HAL
-from history import kubios_response_to_data, push_data
+from history import kubios_response_to_data, push_data, read_data
 from ui import Ui
 import time
 from heart import (
@@ -68,6 +68,7 @@ class Machine(HAL):
                 ("Brightness", s(self.brightness)),
                 ("Invert", self.invert_display),
                 ("Clock", s(self.clock)),
+                ("Sync Up", s(self.sync_up)),
             ],
             s(self.main_menu),
         )
@@ -557,6 +558,27 @@ class Machine(HAL):
 
         self.display.text(text, 0, 0, 1)
         self.request_redraw()
+
+    def sync_up(self):
+        if not self.is_kubios_ready():
+            self.state(self.toast("Kubios not\nset up :c"))
+            return
+
+        stored_data = read_data()
+
+        incomplete_entries = 0
+        for entry in stored_data:
+            if "RAW PPIS" in entry and "SNS" not in entry and "PNS" not in entry:
+                print(entry["RAW PPIS"])
+                ppis = list(map(int, entry["RAW PPIS"][1:-1].split(", ")))
+                self._send_data_to_kubios(ppis)
+                incomplete_entries += 1
+
+        splash = f"Sent {incomplete_entries}\nincomplete\nentries!\n<3"
+
+        self.state(
+            self.toast(splash, previous_state=self.misc, next_state=self.main_menu)
+        )
 
     def on_receive_kubios_response(self, response: dict):
         # TODO(Artur): verify the response structure
