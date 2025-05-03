@@ -96,7 +96,14 @@ class HAL:
         self.rotary_button.irq(self._rotary_knob_press, trigger=Pin.IRQ_FALLING)
 
     def _rotary_knob_rotate(self, _):
-        self.rotary_reset_timer_ms = ticks_ms()
+        # HACK(Artur): OK, SO SOMETIMES TICKS_MS ACTUALLY ALLOCATES
+        # I assume this is a bug and it will have been reported by the time
+        # someone reads this
+        try:
+            self.rotary_reset_timer_ms = ticks_ms()
+        except MemoryError:
+            return
+
         self.rotary_accumulator += 1 if self.rotary_b() else -1
 
         if abs(self.rotary_accumulator) > ROTARY_ROTATION_SENSETIVITY:
