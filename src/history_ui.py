@@ -5,37 +5,18 @@ from constants import (
     UI_MARGIN,
 )
 from heart_ui import update_heart_animation
-from history import read_data, test_store_mock_data
+from history import read_data
 import time
 
 
 class HistoryUi:
-    def __init__(self, hal, history_data, history_count=0):
+    def __init__(self, hal, history_count=0):
         self.asm = hal
-        self.history_data = history_data
+        self.history_data = read_data()
         self.history_count = history_count
         self.selected_row = 0  # 0-3 for rows 1-4
         self.entries_per_screen = 4  # Show 4 entries at a time
-        self.first_frame = True
         self.heart_animation_time = time.time()
-
-    def fill_mock_data(self):
-        """
-        Initialize history data and load mock data if needed
-        Returns:
-            bool: True if initialization successful, False otherwise
-        """
-        # If no data exists, try to load mock data
-        if not self.history_data:
-            start_tuple = (2025, 4, 21, 9, 0, 0, 0, 0)
-            if test_store_mock_data(start_tuple):
-                self.history_data = read_data()
-                return True
-            else:
-                self.display.text("No data", 0, 12, 1)
-                return False
-
-        return True
 
     @property
     def display(self):
@@ -133,8 +114,6 @@ class HistoryUi:
         if not rotary_motion and not self.asm.is_first_frame:
             self._update_display(start_idx, end_idx)
             return
-
-        self.asm.is_first_frame = False
 
         # Handle rotary navigation
         if rotary_motion > 0:  # Clockwise rotation

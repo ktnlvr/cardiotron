@@ -105,6 +105,8 @@ class Machine(HAL):
 
         self.wlan_connecting_ongoing = None
 
+        self.history_ui = HistoryUi(self)
+
     def main_menu(self):
         self.main_menu_ui.tick()
 
@@ -353,9 +355,6 @@ class Machine(HAL):
         self.state(self._history)
 
     def _history(self):
-        if self.is_first_frame:
-            self.history_ui = HistoryUi(self, [], 0)
-            self.history_ui.fill_mock_data()
         self.history_ui.history_tick()
 
     def _history_entry(self, index):
