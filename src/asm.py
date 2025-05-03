@@ -72,7 +72,7 @@ class Machine(HAL):
         self.main_menu_ui = Ui(
             self,
             [
-                ("Measure", s(self.measure_heart_rate)),
+                ("Measure", s(self.measure_heart_rate_splash)),
                 ("History", s(self.history)),
                 ("Setup", s(self.connecting_wifi)),
                 ("Settings", s(self.settings)),
@@ -127,6 +127,21 @@ class Machine(HAL):
             )
         else:
             self.heart_rate_sample_timer.deinit()
+
+    def measure_heart_rate_splash(self):
+        if self.is_kubios_ready():
+            self.state(self.measure_heart_rate)
+        else:
+            SPLASH_MESSAGE = """
+            Hey!
+            WiFi is not set up.
+            Are you sure?
+            short - yes
+            long  - no
+            """
+            self.state(
+                self.toast(SPLASH_MESSAGE, self.main_menu, self.measure_heart_rate)
+            )
 
     def measure_heart_rate(self):
         if self.button_long():
@@ -347,7 +362,7 @@ class Machine(HAL):
         self.history_ui.history_entry_tick(index)
 
     def toast(self, message, previous_state=None, next_state=None):
-        lines = message.split("\n")
+        lines = list(map(str.strip, message.strip().split("\n")))
 
         def _toast_state_machine():
             if self.button_long():

@@ -269,3 +269,6 @@ class HAL:
         log(
             f"Connected to an MQTT Server! Hello! I am MQTT Client {self.mqtt_client_id}"
         )
+
+    def is_kubios_ready(self) -> bool:
+        return self.mqtt_client != None
