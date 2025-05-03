@@ -347,14 +347,6 @@ class Machine(HAL):
         self.display.show()
 
     def history(self):
-        # NOTE(Artur): Since the history screen takes so long to load
-        # this just displays the fact that something is loading to the user
-        self.display.fill(0)
-        self.display.text("Loading...", 0, 0, 1)
-        self.display.show()
-        self.state(self._history)
-
-    def _history(self):
         self.history_ui.history_tick()
 
     def _history_entry(self, index):
