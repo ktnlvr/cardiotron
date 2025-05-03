@@ -11,6 +11,9 @@ from heart import (
 )
 from constants import (
     BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE,
+    KUBIOS_STATUS_DONE,
+    KUBIOS_STATUS_NOT_APPLICABLE,
+    KUBIOS_STATUS_WAITING,
     MIN_MEASUREMENT_TIME_FOR_KUBIOS_S,
     NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
     NO_WIFI_SPLASH_MESSAGE,
@@ -108,6 +111,7 @@ class Machine(HAL):
         self.last_dy = 0
 
         self.wlan_connecting_ongoing = None
+        self.heart_measurement_duration_s = 0
 
         self.history_ui = HistoryUi(self)
 
@@ -124,6 +128,9 @@ class Machine(HAL):
         self.heart_rate = 0
         self.sdnn = 0
         self.rmssd = 0
+        self.heart_rate_first_sane_peak_ms = 0
+        self.heart_rate_measuring_start_ms = 0
+        self.heart_measurement_duration_s = 0
 
     def set_heart_sensor_active(self, active):
         if active:
@@ -156,15 +163,14 @@ class Machine(HAL):
         if self.button_short():
             self.set_heart_sensor_active(False)
 
-            mean_ppi = sum(self.heart_rate_ppis_ms) / len(self.heart_rate_ppis_ms)
-
-            self.state(
-                self.toast(
-                    NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
-                    self.measure_heart_rate,
-                    self.display_heart_rate_analysis,
+            if not self.is_kubios_ready():
+                self.state(
+                    self.toast(
+                        NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
+                        self.measure_heart_rate,
+                        self.display_heart_rate_analysis,
+                    )
                 )
-            )
 
         if self.is_first_frame:
             self.set_heart_sensor_active(True)
@@ -276,17 +282,19 @@ class Machine(HAL):
 
         if self.heart_rate_measuring_start_ms:
             # Display how long the measurement has been going
-            time_since_measurement_started_s = round(
+            self.heart_measurement_duration_s = round(
                 (current_time_ms - self.heart_rate_measuring_start_ms) / 1000
             )
 
-            timer_str = f"{time_since_measurement_started_s}s"
-            if time_since_measurement_started_s >= 60:
-                m = time_since_measurement_started_s // 60
-                s = time_since_measurement_started_s % 60
+            t = self.heart_measurement_duration_s
+
+            timer_str = f"{t}s"
+            if t >= 60:
+                m = t // 60
+                s = t % 60
                 timer_str = f"{m}:{s:02}"
 
-            if time_since_measurement_started_s >= MIN_MEASUREMENT_TIME_FOR_KUBIOS_S:
+            if t >= MIN_MEASUREMENT_TIME_FOR_KUBIOS_S:
                 timer_str += " Ready!"
 
             self.display.text(timer_str, 0, 0, 1)
@@ -362,6 +370,7 @@ class Machine(HAL):
 
         self.aggregate_data(
             self.heart_rate_ppis_ms,
+            self.heart_measurement_duration_s,
             self.heart_rate,
             mean_ppi,
             self.rmssd,
@@ -568,8 +577,10 @@ class Machine(HAL):
 
         incomplete_entries = 0
         for entry in stored_data:
-            if "RAW PPIS" in entry and "SNS" not in entry and "PNS" not in entry:
-                print(entry["RAW PPIS"])
+            if (
+                "KUBIOS STATUS" in entry
+                and entry["KUBIOS_STATUS"] == KUBIOS_STATUS_WAITING
+            ):
                 ppis = list(map(int, entry["RAW PPIS"][1:-1].split(", ")))
                 self._send_data_to_kubios(ppis)
                 incomplete_entries += 1
@@ -583,9 +594,18 @@ class Machine(HAL):
     def on_receive_kubios_response(self, response: dict):
         # TODO(Artur): verify the response structure
         data = kubios_response_to_data(response)
+        data["KUBIOS STATUS"] = KUBIOS_STATUS_DONE
         push_data(data)
 
-    def aggregate_data(self, ppis: list[int], heart_rate_bpm, mean_ppi_ms, rmssd, sdnn):
+    def aggregate_data(
+        self,
+        ppis: list[int],
+        measurement_duration_s,
+        heart_rate_bpm,
+        mean_ppi_ms,
+        rmssd,
+        sdnn,
+    ):
         """
         Returns `True` if the data was actually sent. `False` if remained local.
         """
@@ -596,7 +616,12 @@ class Machine(HAL):
             self._send_data_to_kubios(ppis)
             return True
 
+        kubios_status = KUBIOS_STATUS_NOT_APPLICABLE
+        if measurement_duration_s >= MIN_MEASUREMENT_TIME_FOR_KUBIOS_S:
+            kubios_status = KUBIOS_STATUS_WAITING
+
         data = {
+            "KUBIOS STATUS": kubios_status,
             "ID": hash_int_list(ppis),
             "TIMESTAMP": "0/0/0 00:00",
             "MEAN HR": heart_rate_bpm,

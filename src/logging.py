@@ -18,7 +18,6 @@ def init_logs():
             raise
 
     logfiles = os.listdir("logs")
-    print(f"{len(logfiles)} past logs found!")
 
     localtime = localtime_string()
     log_name = f"log-{localtime}.txt"

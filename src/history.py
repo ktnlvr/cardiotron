@@ -76,14 +76,15 @@ def push_data(data):
     existing_data = read_data()
     existing_ids = {entry["ID"] for entry in existing_data}
 
-    print(data)
-    print(existing_ids)
-
     for entry in existing_data:
         if entry["ID"] == data["ID"]:
             log(f"Entry with id {entry['ID']} already exists, replacing")
             entry = data
+            data = None
         new_data.append(entry)
+
+    if data:
+        new_data.append(data)
 
     new_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
 
