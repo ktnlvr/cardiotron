@@ -11,6 +11,7 @@ from heart import (
 )
 from constants import (
     BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE,
+    MIN_MEASUREMENT_TIME_FOR_KUBIOS_S,
     NO_WIFI_SPLASH_MESSAGE,
     SAMPLE_RATE,
     SAMPLE_SIZE,
@@ -275,6 +276,10 @@ class Machine(HAL):
                 m = time_since_measurement_started_s // 60
                 s = time_since_measurement_started_s % 60
                 timer_str = f"{m}:{s:02}"
+
+            if time_since_measurement_started_s > MIN_MEASUREMENT_TIME_FOR_KUBIOS_S:
+                timer_str += " Ready!"
+
             self.display.text(timer_str, 0, 0, 1)
 
         self.display.show()

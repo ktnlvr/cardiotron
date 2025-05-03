@@ -110,3 +110,5 @@ Short press
 when ready.
 <3
 """
+
+MIN_MEASUREMENT_TIME_FOR_KUBIOS_S = 30
