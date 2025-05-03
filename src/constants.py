@@ -118,7 +118,7 @@ stored locally.
 
 To analyze 
 go to
-Settings >
+Misc >
 Catch Up.
 """
 

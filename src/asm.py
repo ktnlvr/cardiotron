@@ -61,7 +61,7 @@ class Machine(HAL):
         s = self.go_to_state
 
         self.brightness_slider_b = 0xFF
-        self.settings_ui = Ui(
+        self.misc_ui = Ui(
             self,
             [
                 ("Brightness", s(self.brightness)),
@@ -79,7 +79,7 @@ class Machine(HAL):
                 ("Measure", s(self.measure_heart_rate_splash)),
                 ("History", s(self.history)),
                 ("Setup", s(self.connecting_wifi)),
-                ("Settings", s(self.settings)),
+                ("Misc", s(self.misc)),
             ],
         )
 
@@ -391,12 +391,12 @@ class Machine(HAL):
 
         return _toast_state_machine
 
-    def settings(self):
-        self.settings_ui.tick()
+    def misc(self):
+        self.misc_ui.tick()
 
     def brightness(self):
         if self.button():
-            self.state(self.settings)
+            self.state(self.misc)
             return
 
         self.display.fill(0)
@@ -445,7 +445,7 @@ class Machine(HAL):
             self.previous_clock_second = 0
 
         if self.button_long():
-            self.state(self.settings)
+            self.state(self.misc)
             return
 
         time_tuple = list(localtime())
