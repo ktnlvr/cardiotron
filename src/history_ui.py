@@ -1,4 +1,9 @@
-from constants import DISPLAY_WIDTH_PX, CHAR_SIZE_WIDTH_PX
+from constants import (
+    CHAR_SIZE_HEIGHT_PX,
+    DISPLAY_WIDTH_PX,
+    CHAR_SIZE_WIDTH_PX,
+    UI_MARGIN,
+)
 from heart_ui import update_heart_animation
 from history import read_data, test_store_mock_data
 import time
@@ -73,19 +78,24 @@ class HistoryUi:
         else:
             self.display.text(entry["TIMESTAMP"], 0, 0, 1)
 
-        hr_str = f"HR: {int(entry['MEAN HR'])} BPM"
-        ppi_str = f"PPI: {int(entry['MEAN PPI'])} ms"
-        rmssd_str = f"RMSSD: {int(entry['RMSSD'])} ms"
-        sdnn_str = f"SDNN: {int(entry['SDNN'])} ms"
-        sns_str = f"SNS: {entry['SNS']:.1f}"
-        pns_str = f"PNS: {entry['PNS']:.1f}"
+        hr = f"HR: {int(entry['MEAN HR'])} BPM"
+        ppi = f"PPI: {int(entry['MEAN PPI'])} ms"
+        rmssd = f"RMSSD: {int(entry['RMSSD'])} ms"
+        sdnn = f"SDNN: {int(entry['SDNN'])} ms"
+        sns = f"SNS: {entry['SNS']:.1f}"
+        pns = f"PNS: {entry['PNS']:.1f}"
 
-        self.display.text(hr_str, 0, 8, 1)
-        self.display.text(ppi_str, 0, 16, 1)
-        self.display.text(rmssd_str, 0, 24, 1)
-        self.display.text(sdnn_str, 0, 32, 1)
-        self.display.text(sns_str, 0, 40, 1)
-        self.display.text(pns_str, 0, 48, 1)
+        MICRO_UI_GAP_PX = 1
+
+        output = [hr, ppi, rmssd, sdnn, pns]
+        for i, string in enumerate(output):
+            y = (i + 1) * (CHAR_SIZE_HEIGHT_PX + MICRO_UI_GAP_PX) + UI_MARGIN
+            self.display.text(
+                string,
+                0,
+                y,
+                1,
+            )
 
         self.heart_animation_time = update_heart_animation(
             self.display, self.heart_animation_time
