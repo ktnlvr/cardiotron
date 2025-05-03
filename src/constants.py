@@ -43,7 +43,7 @@ SAMPLE_RATE = 15
 # Time difference between each sample taken(in ms)
 TIMESTAMP_DIFFERENCE_SENSOR = 0.004
 # Alpha value for the low pass filter
-ALPHA = 0.5
+ALPHA = 0.7
 # Samples per pixel
 SAMPLES_PROCESSED_PER_COLLECTED = 3
 # Pin number of the heart beat sensor
@@ -90,3 +90,23 @@ KUBIOS_FIELDS = [
     "PNS",
 ]
 NUMERIC_FIELDS = ["MEAN HR", "MEAN PPI", "RMSSD", "SDNN", "SNS", "PNS"]
+
+NO_WIFI_SPLASH_MESSAGE = """
+Hey!
+WiFi is not set up.
+Are you sure?
+
+short - yes
+long  - no
+"""
+
+BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE = """
+Gently put your
+finger on the
+sensor.
+Do not push!
+
+Short press
+when ready.
+<3
+"""

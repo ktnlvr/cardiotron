@@ -10,6 +10,8 @@ from heart import (
     draw_heart_rate_counter,
 )
 from constants import (
+    BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE,
+    NO_WIFI_SPLASH_MESSAGE,
     SAMPLE_RATE,
     SAMPLE_SIZE,
     DISPLAY_HEIGHT_PX,
@@ -129,19 +131,14 @@ class Machine(HAL):
             self.heart_rate_sample_timer.deinit()
 
     def measure_heart_rate_splash(self):
-        if self.is_kubios_ready():
-            self.state(self.measure_heart_rate)
-        else:
-            SPLASH_MESSAGE = """
-            Hey!
-            WiFi is not set up.
-            Are you sure?
-            short - yes
-            long  - no
-            """
-            self.state(
-                self.toast(SPLASH_MESSAGE, self.main_menu, self.measure_heart_rate)
-            )
+        next_state = self.toast(
+            BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE, next_state=self.measure_heart_rate
+        )
+
+        if not self.is_kubios_ready():
+            next_state = self.toast(NO_WIFI_SPLASH_MESSAGE, next_state=next_state)
+
+        self.state(next_state)
 
     def measure_heart_rate(self):
         if self.button_long():
