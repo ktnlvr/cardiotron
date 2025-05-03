@@ -115,6 +115,14 @@ Misc >
 Catch Up.
 """
 
+MEASUREMENT_TOO_SHORT_SPLASH_MESSAGE = """
+Measurement
+too short.
+Try measuring
+again for
+longer.
+"""
+
 MIN_MEASUREMENT_TIME_FOR_KUBIOS_S = 30
 
 KUBIOS_STATUS_DONE = "DONE"

@@ -14,6 +14,7 @@ from constants import (
     KUBIOS_STATUS_DONE,
     KUBIOS_STATUS_NOT_APPLICABLE,
     KUBIOS_STATUS_WAITING,
+    MEASUREMENT_TOO_SHORT_SPLASH_MESSAGE,
     MIN_MEASUREMENT_TIME_FOR_KUBIOS_S,
     NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
     NO_WIFI_SPLASH_MESSAGE,
@@ -163,14 +164,22 @@ class Machine(HAL):
         if self.button_short():
             self.set_heart_sensor_active(False)
 
-            if not self.is_kubios_ready():
+            next_state = self.display_heart_rate_analysis
+
+            if len(self.heart_rate_ppis_ms) < 2:
+                next_state = self.toast(
+                    MEASUREMENT_TOO_SHORT_SPLASH_MESSAGE, self.main_menu, self.main_menu
+                )
+            elif not self.is_kubios_ready():
                 self.state(
                     self.toast(
                         NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
                         self.measure_heart_rate,
-                        self.display_heart_rate_analysis,
+                        next_state,
                     )
                 )
+
+            self.state(next_state)
 
         if self.is_first_frame:
             self.set_heart_sensor_active(True)
