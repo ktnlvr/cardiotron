@@ -94,11 +94,11 @@ class Machine(HAL):
 
         self.heart_rate_last_peak_ms = None
         self.heart_rate_ppis_ms = []
-        self.heart_rate = 0
         self.rmssd = 0
         self.sdnn = 0
 
         self.heart_rate_first_sane_peak_ms = 0
+        self.heart_rate_measuring_start_ms = 0
 
         self.last_filtered_sample = 0
         self.last_dy = 0
@@ -209,6 +209,8 @@ class Machine(HAL):
 
                 time_since_peak_ms = current_time_ms - self.heart_rate_last_peak_ms
                 if MIN_PEAK_INTERVAL_MS < time_since_peak_ms < MAX_PEAK_INTERVAL_MS:
+                    if not self.heart_rate_measuring_start_ms:
+                        self.heart_rate_measuring_start_ms = current_time_ms
                     self.heart_rate_ppis_ms.append(time_since_peak_ms)
                     mean_peak = (
                         sum(self.heart_rate_ppis_ms[-PPI_SIZE:])
@@ -224,6 +226,7 @@ class Machine(HAL):
             time.ticks_diff(current_time_ms, self.heart_rate_last_peak_ms)
             > MAX_NO_PEAK_INTERVAL_MS
         ):
+            self.heart_rate_measuring_start_ms = 0
             self.heart_rate_first_sane_peak_ms = 0
             self.heart_rate_ppis_ms = []
             self.heart_rate = 0
@@ -259,10 +262,10 @@ class Machine(HAL):
 
         draw_heart_rate_counter(self.display, self.heart_rate)
 
-        if self.heart_rate_first_sane_peak_ms:
+        if self.heart_rate_measuring_start_ms:
             # Display how long the measurement has been going
             time_since_measurement_started_s = round(
-                (current_time_ms - self.heart_rate_first_sane_peak_ms) / 1000
+                (current_time_ms - self.heart_rate_measuring_start_ms) / 1000
             )
 
             timer_str = f"{time_since_measurement_started_s}s"
