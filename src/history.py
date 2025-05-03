@@ -6,8 +6,9 @@ from logging import log, eth_log
 from constants import (
     HISTORY_DATA_FILENAME,
     HISTORY_DATA_FOLDER,
-    KUBIOS_FIELDS,
-    NUMERIC_FIELDS,
+    HISTORY_ENTRY_DATA_SEPARATOR,
+    HISTORY_ENTRY_KEY_VALUE_SEPARATOR,
+    HISTORY_NUMERIC_FIELDS,
 )
 import re
 
@@ -32,6 +33,7 @@ def kubios_response_to_data(raw: dict) -> dict:
     for storage
     """
     out = {
+        "ID": raw["id"],
         "TIMESTAMP": timestamp,
         "MEAN HR": mean_hr,
         "MEAN PPI": mean_ppi,
@@ -44,12 +46,24 @@ def kubios_response_to_data(raw: dict) -> dict:
     return out
 
 
+def init_history_file():
+    try:
+        uos.listdir(HISTORY_DATA_FOLDER)
+    except OSError:
+        uos.mkdir(HISTORY_DATA_FOLDER)
+        f = open(HISTORY_DATA_FILENAME, "w")
+        f.close()
+        log("History file created")
+
+
 def push_data(data):
     """
     Push a single bit of data to be stored
     """
 
-    for field in NUMERIC_FIELDS:
+    init_history_file()
+
+    for field in HISTORY_NUMERIC_FIELDS:
         if field not in data:
             continue
 
@@ -60,26 +74,19 @@ def push_data(data):
 
     existing_data = read_data()
 
-    existing_timestamps = {entry["TIMESTAMP"] for entry in existing_data}
-    if data["TIMESTAMP"] not in existing_timestamps:
+    existing_ids = {entry["ID"] for entry in existing_data}
+    if data["ID"] not in existing_ids:
         existing_data.append(data)
 
     existing_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
 
-    try:
-        uos.listdir(HISTORY_DATA_FOLDER)
-    except OSError:
-        uos.mkdir(HISTORY_DATA_FOLDER)
-        log("Created hr_data directory")
-
     with open(HISTORY_DATA_FILENAME, "w") as f:
         for entry in existing_data:
-            line = ",".join(str(entry[field]) for field in KUBIOS_FIELDS)
+            line = HISTORY_ENTRY_DATA_SEPARATOR.join(
+                f"{field}{HISTORY_ENTRY_KEY_VALUE_SEPARATOR}{str(entry[field])}"
+                for field in entry
+            )
             f.write(line + "\n")
-
-    log(
-        f"Successfully stored {len(data)} new entries, total {len(existing_data)} entries"
-    )
 
 
 def read_data():
@@ -87,43 +94,29 @@ def read_data():
     Read and parse data from hr_data/data.txt into a list of dictionaries.
     """
     data = []
-    try:
-        # Check if the directory exists first
-        try:
-            uos.listdir(HISTORY_DATA_FOLDER)
-        except OSError:
-            # Directory doesn't exist, return empty list
-            log("History directory doesn't exist yet")
-            return data
 
-        # Check if the file exists
-        try:
-            with open(HISTORY_DATA_FILENAME, "r") as f:
-                for line_num, line in enumerate(f, 1):
-                    try:
-                        values = line.strip().split(",")
+    init_history_file()
 
-                        entry = {}
-                        for i, field in enumerate(KUBIOS_FIELDS):
-                            if field in NUMERIC_FIELDS:
-                                entry[field] = float(values[i])
-                            else:
-                                entry[field] = values[i]
+    with open(HISTORY_DATA_FILENAME, "r") as f:
+        for line in f.readlines():
+            values = line.strip().split(HISTORY_ENTRY_DATA_SEPARATOR)
 
-                        data.append(entry)
-                    except (ValueError, IndexError):
-                        eth_log(
-                            f"Skipping malformed line {line_num} in history file: {line.strip()}"
-                        )
-                        continue
-        except OSError:
-            # File doesn't exist, return empty list
-            log("History file doesn't exist yet")
-            return data
+            entry = {
+                p[0]: p[1]
+                for p in map(
+                    lambda s: s.split(HISTORY_ENTRY_KEY_VALUE_SEPARATOR),
+                    values,
+                )
+            }
 
-        log(f"Successfully read {len(data)} entries from history")
-    except Exception as e:
-        eth_log(f"Error reading history file: {str(e)}")
+            for k, v in entry.items():
+                if k == "ID":
+                    entry[k] = int(v)
+                    continue
+                if k in HISTORY_NUMERIC_FIELDS:
+                    entry[k] = float(v)
+
+            data.append(entry)
 
     return data
 

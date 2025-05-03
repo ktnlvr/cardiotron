@@ -29,9 +29,10 @@ while True:
         machine.execute()
     except Exception as e:
         machine.display.fill(0)
-        machine.display.text("Error occurred:", 0, 0)
+        machine.display.text("Wow! Error!", 0, 0)
         machine.display.text(str(e)[:16], 0, 10)
         machine.display.show()
-        time.sleep(2)
         log("Critical Failure!", e)
+        time.sleep(2)
+        mpy_machine.reset()
         raise

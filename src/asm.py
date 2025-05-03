@@ -39,6 +39,7 @@ from ringbuffer import Ringbuffer
 from machine import Timer
 import math
 from collections import OrderedDict
+from utils import hash_int_list
 from wifi import connect_ap
 from network import (
     STAT_CONNECTING,
@@ -155,14 +156,6 @@ class Machine(HAL):
             self.set_heart_sensor_active(False)
 
             mean_ppi = sum(self.heart_rate_ppis_ms) / len(self.heart_rate_ppis_ms)
-
-            self.aggregate_data(
-                self.heart_rate_ppis_ms,
-                self.heart_rate,
-                mean_ppi,
-                self.rmssd,
-                self.sdnn,
-            )
 
             self.state(
                 self.toast(
@@ -365,6 +358,14 @@ class Machine(HAL):
             )
 
         self.display.show()
+
+        self.aggregate_data(
+            self.heart_rate_ppis_ms,
+            self.heart_rate,
+            mean_ppi,
+            self.rmssd,
+            self.sdnn,
+        )
 
     def history(self):
         self.history_ui.history_tick()
@@ -574,11 +575,13 @@ class Machine(HAL):
             return True
 
         data = {
+            "ID": hash_int_list(ppis),
             "TIMESTAMP": "0/0/0 00:00",
             "MEAN HR": heart_rate_bpm,
             "MEAN PPI": mean_ppi_ms,
             "RMSSD": rmssd,
             "SDNN": sdnn,
+            "RAW PPIS": str(ppis),
         }
 
         push_data(data)

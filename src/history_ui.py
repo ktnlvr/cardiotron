@@ -8,6 +8,8 @@ from heart_ui import update_heart_animation
 from history import read_data
 import time
 
+from logging import log
+
 
 class HistoryUi:
     def __init__(self, hal, history_count=0):
@@ -59,16 +61,21 @@ class HistoryUi:
         else:
             self.display.text(entry["TIMESTAMP"], 0, 0, 1)
 
-        hr = f"HR: {int(entry['MEAN HR'])} BPM"
-        ppi = f"PPI: {int(entry['MEAN PPI'])} ms"
-        rmssd = f"RMSSD: {int(entry['RMSSD'])} ms"
-        sdnn = f"SDNN: {int(entry['SDNN'])} ms"
-        sns = f"SNS: {entry['SNS']:.1f}"
-        pns = f"PNS: {entry['PNS']:.1f}"
+        hr = f"HR: {round(entry['MEAN HR'])} BPM"
+        ppi = f"PPI: {round(entry['MEAN PPI'])} ms"
+        rmssd = f"RMSSD: {entry['RMSSD']:.3f} ms"
+        sdnn = f"SDNN: {entry['SDNN']:.3f} ms"
+        output = [hr, ppi, rmssd, sdnn]
+
+        if "SNS" in entry:
+            output.append(f"SNS: {entry['SNS']:.3f}")
+        elif "PNS" in entry:
+            output.append(f"PNS: {entry['PNS']:.3f}")
+
+        log(entry)
 
         MICRO_UI_GAP_PX = 1
 
-        output = [hr, ppi, rmssd, sdnn, pns]
         for i, string in enumerate(output):
             y = (i + 1) * (CHAR_SIZE_HEIGHT_PX + MICRO_UI_GAP_PX) + UI_MARGIN
             self.display.text(
@@ -114,6 +121,8 @@ class HistoryUi:
         if not rotary_motion and not self.asm.is_first_frame:
             self._update_display(start_idx, end_idx)
             return
+
+        self.history_data = read_data()
 
         # Handle rotary navigation
         if rotary_motion > 0:  # Clockwise rotation
