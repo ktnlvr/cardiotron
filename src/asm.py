@@ -267,6 +267,9 @@ class Machine(HAL):
         self.heart_rate_screen_samples.clear()
         self.filtered_samples.clear()
         self.heart_rate_samples.clear()
+        self.heart_rate = 0
+        self.sdnn = 0
+        self.rmssd = 0
 
     def display_heart_rate_analysis(self):
         if self.button_short():
