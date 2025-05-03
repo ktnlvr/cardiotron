@@ -112,6 +112,9 @@ class Machine(HAL):
         self.heart_rate_samples.clear()
         self.heart_rate_last_peak_ms = None
         self.heart_rate_ppis_ms = []
+        self.heart_rate = 0
+        self.sdnn = 0
+        self.rmssd = 0
 
     def set_heart_sensor_active(self, active):
         if active:
@@ -261,25 +264,15 @@ class Machine(HAL):
         self.last_filtered_sample = filtered_sample
         self.last_dy = dy
 
-    def clear_buffer(self):
-        self.heart_rate_ppis_ms = []
-        self.heart_rate_mean_window.clear()
-        self.heart_rate_screen_samples.clear()
-        self.filtered_samples.clear()
-        self.heart_rate_samples.clear()
-        self.heart_rate = 0
-        self.sdnn = 0
-        self.rmssd = 0
-
     def display_heart_rate_analysis(self):
         if self.button_short():
             self.state(self.main_menu)
-            self.clear_buffer()
+            self._reset_heart_measurements()
             return
 
         if self.button_long():
             self.state(self.measure_heart_rate)
-            self.clear_buffer()
+            self._reset_heart_measurements()
             return
 
         if not self.is_first_frame:
