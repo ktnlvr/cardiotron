@@ -111,4 +111,15 @@ when ready.
 <3
 """
 
+NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE = """
+Kubios was not
+set up! Data
+stored locally.
+
+To analyze 
+go to
+Settings >
+Catch Up.
+"""
+
 MIN_MEASUREMENT_TIME_FOR_KUBIOS_S = 30

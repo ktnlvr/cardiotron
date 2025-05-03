@@ -12,6 +12,7 @@ from heart import (
 from constants import (
     BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE,
     MIN_MEASUREMENT_TIME_FOR_KUBIOS_S,
+    NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
     NO_WIFI_SPLASH_MESSAGE,
     SAMPLE_RATE,
     SAMPLE_SIZE,
@@ -152,10 +153,24 @@ class Machine(HAL):
 
         if self.button_short():
             self.set_heart_sensor_active(False)
-            self._send_data_to_kubios(
+
+            mean_ppi = sum(self.heart_rate_ppis_ms) / len(self.heart_rate_ppis_ms)
+
+            self.aggregate_data(
                 self.heart_rate_ppis_ms,
+                self.heart_rate,
+                mean_ppi,
+                self.rmssd,
+                self.sdnn,
             )
-            self.state(self.display_heart_rate_analysis)
+
+            self.state(
+                self.toast(
+                    NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
+                    self.measure_heart_rate,
+                    self.display_heart_rate_analysis,
+                )
+            )
 
         if self.is_first_frame:
             self.set_heart_sensor_active(True)
@@ -543,8 +558,32 @@ class Machine(HAL):
         self.request_redraw()
 
     def on_receive_kubios_response(self, response: dict):
+        # TODO(Artur): verify the response structure
         data = kubios_response_to_data(response)
         push_data(data)
+
+    def aggregate_data(self, ppis: list[int], heart_rate_bpm, mean_ppi_ms, rmssd, sdnn):
+        """
+        Returns `True` if the data was actually sent. `False` if remained local.
+        """
+
+        if self.is_kubios_ready():
+            # Data is sent off to kubios and handled asynchronously when
+            # a response is received
+            self._send_data_to_kubios(ppis)
+            return True
+
+        data = {
+            "TIMESTAMP": "0/0/0 00:00",
+            "MEAN HR": heart_rate_bpm,
+            "MEAN PPI": mean_ppi_ms,
+            "RMSSD": rmssd,
+            "SDNN": sdnn,
+        }
+
+        push_data(data)
+
+        return False
 
     def wifi_connected(self):
         if self.button():
