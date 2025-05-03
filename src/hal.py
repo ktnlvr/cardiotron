@@ -24,6 +24,7 @@ from constants import (
 )
 import ssd1306
 import os
+from utils import hash_int_list
 from wifi import make_wlan
 from logging import log, eth_log
 from umqtt.simple import MQTTClient
@@ -231,8 +232,10 @@ class HAL:
         os.sync()  # type: ignore
 
     def _send_data_to_kubios(self, ppis: list[int]):
+        generated_id = hash_int_list(ppis)
+
         payload = {
-            "id": 0,
+            "id": generated_id,
             "type": "RRI",
             "data": ppis,
             "analysis": {"type": "readiness"},
