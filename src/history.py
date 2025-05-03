@@ -48,63 +48,30 @@ def push_data(data):
     """
     Push a single bit of data to be stored
     """
-    return store_data([data])
 
+    for field in NUMERIC_FIELDS:
+        if field not in data:
+            continue
 
-def store_data(list_of_dicts):
-    """
-    Parse JSON data from Kubios and store it in hr_data/data.txt.
-    Each line is a comma-separated entry with newest data at the top.
-    Timestamps are formatted as "dd/mm/yy hh:mm".
-    """
-    if not isinstance(list_of_dicts, list):
-        raise ValueError("Expected a list of dicts, got a non-list")
+        if not isinstance(data[field], (int, float)):
+            raise ValueError(f"Invalid numeric value for {field}")
 
-    data = list_of_dicts
-
-    # Validate data structure and format timestamps
-    for entry in data:
-        if not all(field in entry for field in KUBIOS_FIELDS):
-            raise ValueError("Missing required fields")
-
-        # Validate numeric fields
-        for field in NUMERIC_FIELDS:
-            if not isinstance(entry[field], (int, float)):
-                raise ValueError(f"Invalid numeric value for {field}")
-
-        # Format timestamp to "dd/mm/yy hh:mm"
-        if "TIMESTAMP" in entry:
-            timestamp_parts = entry["TIMESTAMP"].split()
-            if len(timestamp_parts) >= 2:
-                date_parts = timestamp_parts[0].split("-")
-                time_parts = timestamp_parts[1].split(":")
-                if len(date_parts) >= 3 and len(time_parts) >= 2:
-                    # Format as "dd/mm/yy hh:mm"
-                    formatted_date = (
-                        f"{date_parts[2]}/{date_parts[1]}/{date_parts[0][2:]}"
-                    )
-                    formatted_time = f"{time_parts[0]}:{time_parts[1]}"
-                    entry["TIMESTAMP"] = f"{formatted_date} {formatted_time}"
+    data["TIMESTAMP"] = data["TIMESTAMP"].replace("-", "/")
 
     existing_data = read_data()
 
-    # Merge new data with existing data (avoid duplicates)
     existing_timestamps = {entry["TIMESTAMP"] for entry in existing_data}
-    for entry in data:
-        if entry["TIMESTAMP"] not in existing_timestamps:
-            existing_data.append(entry)
+    if data["TIMESTAMP"] not in existing_timestamps:
+        existing_data.append(data)
 
-    # Sort by timestamp (newest first)
     existing_data.sort(key=lambda x: x["TIMESTAMP"], reverse=True)
 
-    # Ensure hr_data folder exists
     try:
         uos.listdir(HISTORY_DATA_FOLDER)
     except OSError:
         uos.mkdir(HISTORY_DATA_FOLDER)
         log("Created hr_data directory")
 
-    # Write data to file as newest-first
     with open(HISTORY_DATA_FILENAME, "w") as f:
         for entry in existing_data:
             line = ",".join(str(entry[field]) for field in KUBIOS_FIELDS)
@@ -113,7 +80,6 @@ def store_data(list_of_dicts):
     log(
         f"Successfully stored {len(data)} new entries, total {len(existing_data)} entries"
     )
-    return True
 
 
 def read_data():
@@ -136,11 +102,6 @@ def read_data():
                 for line_num, line in enumerate(f, 1):
                     try:
                         values = line.strip().split(",")
-                        if len(values) != len(KUBIOS_FIELDS):
-                            eth_log(
-                                f"Skipping malformed line {line_num} in history file: {line.strip()}"
-                            )
-                            continue
 
                         entry = {}
                         for i, field in enumerate(KUBIOS_FIELDS):
@@ -170,52 +131,3 @@ def read_data():
 # random integer generator
 def randrange(a, b):
     return a + urandom.getrandbits(8) % (b - a + 1)
-
-
-def test_store_mock_data(start_tuple, days=5, hours_per_day=8):
-    """
-    Temporary test function to store mock Kubios response data.
-    if data is already stored, it will not be overwritten.
-    """
-    mock_data = []
-    try:
-        for day in range(days):
-            for hour in range(9, 9 + hours_per_day):
-                t = (
-                    start_tuple[0],
-                    start_tuple[1],
-                    start_tuple[2] + day,
-                    hour,
-                    0,
-                    0,
-                    0,
-                    0,
-                )
-                seconds = time.mktime(t)
-                local_time = time.localtime(seconds)
-                timestamp = "{:04d}-{:02d}-{:02d} {:02d}:00:00".format(
-                    local_time[0], local_time[1], local_time[2], local_time[3]
-                )
-                entry = {
-                    "TIMESTAMP": timestamp,
-                    "TIMEZONE": "UTC",
-                    "MEAN HR": randrange(65, 85),
-                    "MEAN PPI": randrange(750, 950),
-                    "RMSSD": randrange(35, 55),
-                    "SDNN": randrange(50, 75),
-                    "SNS": randrange(25, 35),
-                    "PNS": randrange(60, 80),
-                }
-                mock_data.append(entry)
-
-        # Store the mock data
-        result = store_data(mock_data)
-        if result:
-            log("Successfully stored mock Kubios data")
-        else:
-            eth_log("Failed to store mock Kubios data")
-
-        return result
-    except Exception as e:
-        eth_log(f"Error in test_store_mock_data: {str(e)}")
-        return False
