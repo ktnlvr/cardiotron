@@ -286,7 +286,7 @@ class Machine(HAL):
                 s = time_since_measurement_started_s % 60
                 timer_str = f"{m}:{s:02}"
 
-            if time_since_measurement_started_s > MIN_MEASUREMENT_TIME_FOR_KUBIOS_S:
+            if time_since_measurement_started_s >= MIN_MEASUREMENT_TIME_FOR_KUBIOS_S:
                 timer_str += " Ready!"
 
             self.display.text(timer_str, 0, 0, 1)
