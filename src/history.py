@@ -28,10 +28,10 @@ def kubios_response_to_data(raw: dict) -> dict:
 
     date, time = timestamp.split("T")
     Y, M, D = date.split("-")
-    H, M, *_ = time.split(":")
+    h, m, *_ = time.split(":")
     Y = str(int(Y) % 2000)
 
-    timestamp = f"{D}/{M}/{Y} {H:02}:{M:02}"
+    timestamp = f"{D}/{M}/{Y} {h:02}:{m:02}"
 
     """
     Convert the raw kubios response to the data format apt
