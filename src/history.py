@@ -29,7 +29,7 @@ def kubios_response_to_data(raw: dict) -> dict:
     date, time = timestamp.split("T")
     Y, M, D = date.split("-")
     H, M, *_ = time.split(":")
-    Y %= 2000
+    Y = str(int(Y) % 2000)
 
     timestamp = f"{D}/{M}/{Y} {H:02}:{M:02}"
 
@@ -79,7 +79,6 @@ def push_data(data):
 
     new_data = []
     existing_data = read_data()
-    existing_ids = {entry["ID"] for entry in existing_data}
 
     for entry in existing_data:
         if entry["ID"] == data["ID"]:
