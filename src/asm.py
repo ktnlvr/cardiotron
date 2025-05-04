@@ -531,7 +531,6 @@ class Machine(HAL):
 
                 success = self.net_manager.connect()
                 if success:
-                    ip = self.net_manager.get_ip() or "N/A"
                     self.state(
                         self.toast(
                             f"Setup\nsuccessful!\n\n",

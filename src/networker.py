@@ -3,14 +3,13 @@ import time
 import select
 import socket
 from logging import eth_log
-from net.dependencies import Orchestrator, Protocol, Server, HTTP, TCP, IpSink
+from net.dependencies import Orchestrator, Protocol, Server, HTTP, TCP
 import json
 import os
 
 ap_ip = "192.168.4.1"
 NETWORK_FILE = "/public/networks.json"
 
-# Define paths that should always redirect to the portal
 REDIRECT_PATHS = {
     b"/portal",
     b"/hotspot-detect.html",
@@ -84,9 +83,9 @@ class dns(Server):
 
 
 class http(HTTP):
-    def __init__(self, orch, ip, routes, portal_ref):
-        sink = IpSink(ip)
-        super().__init__(orch, routes, sink)
+    def __init__(self, orch, ip_bytes, routes, portal_ref):
+        super().__init__(orch, routes)
+        self.ap_ip_bytes = ip_bytes
         self.portal_ref = portal_ref
 
     class FixedResponse(HTTP.Response):
@@ -174,10 +173,7 @@ class http(HTTP):
     def handle_request(self, sock, req):
         res = self.FixedResponse(self, sock)
 
-        ip_redirect_bytes = self.ip_sink.get() if self.ip_sink else None
-        portal_url = (
-            b"http://" + ip_redirect_bytes + b"/portal" if ip_redirect_bytes else None
-        )
+        portal_url = b"http://" + self.ap_ip_bytes + b"/portal"
 
         host = req.host.decode() if req.host else ""
         if host and any(
@@ -191,10 +187,7 @@ class http(HTTP):
                 "apple.com",
             ]
         ):
-            if portal_url:
-                res.redirect(portal_url)
-            else:
-                res.send(HTTP.Response.Status.NOT_FOUND)
+            res.redirect(portal_url)
             return
 
         try:
@@ -207,10 +200,7 @@ class http(HTTP):
 
         if req.path in REDIRECT_PATHS:
             eth_log(f"Connectivity check (Path): {req.path.decode()}")
-            if portal_url:
-                res.redirect(portal_url)
-            else:
-                res.file(b"/public/portal.html")
+            res.redirect(portal_url)
             return
 
         route = self.parse_route(req)
