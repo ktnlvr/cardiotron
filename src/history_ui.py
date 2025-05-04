@@ -1,5 +1,6 @@
 from constants import (
     CHAR_SIZE_HEIGHT_PX,
+    DISPLAY_HEIGHT_PX,
     DISPLAY_WIDTH_PX,
     CHAR_SIZE_WIDTH_PX,
     UI_MARGIN,
@@ -103,7 +104,7 @@ class HistoryUi:
             self.asm.state(self.asm.main_menu)
             return
 
-        if self.asm.button_short():
+        if self.asm.button_short() and self.history_data:
             self.asm.state(self.asm._history_entry, self.history_count)
             return
 
@@ -165,10 +166,16 @@ class HistoryUi:
         """Update the display with the current history entries"""
         self.display.fill(0)
 
-        self.display.text("History:", 0, 0, 1)
+        self.display.text("History", 0, 0, 1)
 
-        # Display data number (current/total)
         data_len = len(self.history_data)
+        if data_len == 0:
+            empty_text = "Nothing yet..."
+            text_size_x_px = len(empty_text) * CHAR_SIZE_WIDTH_PX
+            horizontal_center = DISPLAY_WIDTH_PX // 2 - text_size_x_px // 2
+            vertical_center = DISPLAY_HEIGHT_PX // 2
+            self.display.text(empty_text, horizontal_center, vertical_center, 1)
+
         current_page_number = self.history_count + 1
         page_text = f"{current_page_number}/{data_len}"
 
