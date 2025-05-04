@@ -26,7 +26,12 @@ def kubios_response_to_data(raw: dict) -> dict:
     sns = analysis["sns_index"]
     pns = analysis["pns_index"]
 
-    timestamp = f"0/0/0 20:30"
+    date, time = timestamp.split("T")
+    Y, M, D = date.split("-")
+    H, M, *_ = time.split(":")
+    Y %= 2000
+
+    timestamp = f"{D}/{M}/{Y} {H:02}:{M:02}"
 
     """
     Convert the raw kubios response to the data format apt

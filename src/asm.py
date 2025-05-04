@@ -629,10 +629,13 @@ class Machine(HAL):
         if measurement_duration_s >= MIN_MEASUREMENT_TIME_FOR_KUBIOS_S:
             kubios_status = KUBIOS_STATUS_WAITING
 
+        Y, M, D, H, m, *_ = localtime()
+        Y %= 2000
+
         data = {
             "KUBIOS STATUS": kubios_status,
             "ID": hash_int_list(ppis),
-            "TIMESTAMP": "0/0/0 00:00",
+            "TIMESTAMP": f"{D}/{M}/{Y} {H}:{m}",
             "MEAN HR": heart_rate_bpm,
             "MEAN PPI": mean_ppi_ms,
             "RMSSD": rmssd,
