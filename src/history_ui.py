@@ -70,10 +70,8 @@ class HistoryUi:
 
         if "SNS" in entry:
             output.append(f"SNS: {entry['SNS']:.3f}")
-        elif "PNS" in entry:
+        if "PNS" in entry:
             output.append(f"PNS: {entry['PNS']:.3f}")
-
-        log(entry)
 
         MICRO_UI_GAP_PX = 1
 
