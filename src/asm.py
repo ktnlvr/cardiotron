@@ -47,7 +47,9 @@ class Machine(HAL):
         super().__init__(self.main_menu)
 
         s = self.go_to_state
-        self.network_manager = networker.NetworkManager(button_long_check_func=self.button_long)
+        self.net_manager = networker.network_manager(
+            button_long_check_func=self.button_long
+        )
 
         self.brightness_slider_b = 0xFF
         self.settings_ui = Ui(
@@ -78,7 +80,7 @@ class Machine(HAL):
             [
                 ("Start Setup", s(self.network_run_portal)),
             ],
-            s(self.main_menu)
+            s(self.main_menu),
         )
 
         self.network_settings_ui = Ui(
@@ -87,7 +89,7 @@ class Machine(HAL):
                 ("Status/Connect", s(self.network_connect_or_status)),
                 ("Disconnect", s(self.network_disconnect)),
             ],
-            s(self.settings)
+            s(self.settings),
         )
 
         self.heart_rate = 0
@@ -480,43 +482,71 @@ class Machine(HAL):
         self.display.fill(0)
         self.display.text("Connecting...", UI_MARGIN, UI_MARGIN)
         self.display.show()
-        time.sleep(0.1) # Allow display update
-        eth_log("Attempting connection from status/connect...") # Added log
-        success = self.network_manager.connect()
-        time.sleep(1) # Add delay here
-        
-        is_now_connected = self.network_manager.is_connected()
+        time.sleep(0.1)
+        eth_log("Attempting connection from status/connect...")  # Added log
+        success = self.net_manager.connect()
+
+        is_now_connected = self.net_manager.is_connected()
         if is_now_connected:
-            ip = self.network_manager.get_ip_address()
-            self.state(self.toast(f"Connected!\nIP: {ip if ip else 'N/A'}", previous_state=self.network_settings, next_state=self.network_settings))
+            ip = self.net_manager.get_ip()
+            self.state(
+                self.toast(
+                    f"Connected!\nIP: {ip if ip else 'N/A'}",
+                    previous_state=self.network_settings,
+                    next_state=self.network_settings,
+                )
+            )
         else:
-            self.state(self.toast("Connection\nFailed", previous_state=self.network_settings, next_state=self.network_settings))
+            self.state(
+                self.toast(
+                    "Connection\nFailed",
+                    previous_state=self.network_settings,
+                    next_state=self.network_settings,
+                )
+            )
 
     def network_disconnect(self):
-        self.network_manager.disconnect()
-        self.state(self.toast("Disconnected", previous_state=self.network_settings, next_state=self.network_settings))
+        self.net_manager.disconnect()
+        self.state(
+            self.toast(
+                "Disconnected",
+                previous_state=self.network_settings,
+                next_state=self.network_settings,
+            )
+        )
 
     def network_run_portal(self):
         if self.button_long():
-            self.network_manager.stop_portal()
+            self.net_manager.stop_portal()
             self.state(self.main_menu)
             return
 
         if not self.is_first_frame:
-            if self.network_manager._portal_instance is not None:
+            if self.net_manager.portal is not None:
                 pass
             else:
                 self.display.fill(0)
                 self.display.text("Connecting...", UI_MARGIN, UI_MARGIN)
                 self.display.show()
-                time.sleep(0.1)
 
-                success = self.network_manager.connect()
+                success = self.net_manager.connect()
                 if success:
-                    ip = self.network_manager.get_ip_address() or "N/A"
-                    self.state(self.toast(f"Setup\nsuccessful!", previous_state=self.main_menu, next_state=self.main_menu))
+                    ip = self.net_manager.get_ip() or "N/A"
+                    self.state(
+                        self.toast(
+                            f"Setup\nsuccessful!\n\n",
+                            previous_state=self.main_menu,
+                            next_state=self.main_menu,
+                        )
+                    )
                 else:
-                    self.state(self.toast("Couldn't\nconnect", previous_state=self.main_menu, next_state=self.main_menu))
+                    self.state(
+                        self.toast(
+                            "Setup\nfailed!\n\nTry again.",
+                            previous_state=self.main_menu,
+                            next_state=self.main_menu,
+                        )
+                    )
             return
 
         self.display.fill(0)
@@ -525,7 +555,7 @@ class Machine(HAL):
         self.display.text("Hold to", 1, UI_MARGIN + CHAR_SIZE_HEIGHT_PX * 4)
         self.display.text("return", 1, UI_MARGIN + CHAR_SIZE_HEIGHT_PX * 5)
 
-        with open('/net/qr.pbm', 'rb') as f:
+        with open("/net/qr.pbm", "rb") as f:
             f.readline()
             f.readline()
             f.readline()
@@ -534,4 +564,4 @@ class Machine(HAL):
 
         self.display.blit(fb, DISPLAY_WIDTH_PX - 58 - UI_MARGIN, UI_MARGIN)
         self.display.show()
-        self.network_manager.start_portal()
+        self.net_manager.start_portal()
