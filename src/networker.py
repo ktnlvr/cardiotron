@@ -430,6 +430,7 @@ class captive_portal:
 
             res.tcp.end(res.sock)
             eth_log("Save network request successfully processed.")
+            time.sleep(1)
             self.network_saved = True
 
         except Exception as e:

@@ -86,7 +86,7 @@ class Machine(HAL):
         self.network_settings_ui = Ui(
             self,
             [
-                ("Status/Connect", s(self.network_connect_or_status)),
+                ("Connect", s(self.network_connect_or_status)),
                 ("Disconnect", s(self.network_disconnect)),
             ],
             s(self.settings),
