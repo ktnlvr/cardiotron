@@ -233,8 +233,11 @@ class HAL:
         """
         Run the current state once and update the display.
         """
-        if self.mqtt_client:
-            self.mqtt_client.check_msg()
+        try:
+            if self.mqtt_client:
+                self.mqtt_client.check_msg()
+        except Exception as e:
+            eth_log(f"MQTT check_msg error: {e}")
 
         if ticks_ms() - self.rotary_reset_timer_ms > ROTARY_ROTATION_RESET_TIMEOUT_MS:
             if self.rotary_accumulator:
