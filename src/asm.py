@@ -161,14 +161,14 @@ class Machine(HAL):
         self.current_animation_name = "idle-heart"
         next_state_func = self.toast(
             BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE,
-            animation_name="prepare",
+            animation_name="idle-heart",
             next_state=self.measure_heart_rate,
         )
 
         if not self.is_kubios_ready():
             next_state_func = self.toast(
                 NO_WIFI_SPLASH_MESSAGE,
-                animation_name="warning",
+                animation_name="cry",
                 next_state=next_state_func,
             )
 
@@ -424,7 +424,7 @@ class Machine(HAL):
         self.history_ui.history_entry_tick(index)
 
     def toast(
-        self, message, animation_name="alert", previous_state=None, next_state=None
+        self, message, animation_name="idle", previous_state=None, next_state=None
     ):
         lines = list(map(str.strip, message.strip().split("\n")))
         self.current_animation_name = animation_name
@@ -581,7 +581,7 @@ class Machine(HAL):
     def sync_up(self):
         self.current_animation_name = "walk"
         if not self.is_kubios_ready():
-            self.state(self.toast("Kubios not\nset up :c", animation_name="warning"))
+            self.state(self.toast("Kubios not\nset up :c", animation_name="cry"))
             return
 
         stored_data = read_data()
@@ -668,6 +668,7 @@ class Machine(HAL):
             self.state(
                 self.toast(
                     f"Connected!\nIP: {ip if ip else 'N/A'}",
+                    animation_name="wifi",
                     previous_state=self.network_settings,
                     next_state=self.network_settings,
                 )
@@ -676,6 +677,7 @@ class Machine(HAL):
             self.state(
                 self.toast(
                     "Connection\nFailed",
+                    animation_name="cry",
                     previous_state=self.network_settings,
                     next_state=self.network_settings,
                 )
@@ -686,6 +688,7 @@ class Machine(HAL):
         self.state(
             self.toast(
                 "Disconnected",
+                animation_name="sleep",
                 previous_state=self.network_settings,
                 next_state=self.network_settings,
             )
@@ -710,6 +713,7 @@ class Machine(HAL):
                     self.state(
                         self.toast(
                             f"Setup\nsuccessful!\n\n",
+                            animation_name="wifi-walk",
                             previous_state=self.main_menu,
                             next_state=self.main_menu,
                         )
@@ -718,6 +722,7 @@ class Machine(HAL):
                     self.state(
                         self.toast(
                             "Setup\nfailed!\n\nTry again.",
+                            animation_name="cry",
                             previous_state=self.main_menu,
                             next_state=self.main_menu,
                         )
