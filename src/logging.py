@@ -18,7 +18,6 @@ def init_logs():
             raise
 
     logfiles = os.listdir("logs")
-    print(f"{len(logfiles)} past logs found!")
 
     localtime = localtime_string()
     log_name = f"log-{localtime}.txt"
@@ -34,7 +33,7 @@ def eth_log(*args):
 def log(*args):
     if not active_log:
         init_logs()
-    string = eth_log(*args)
+    string = eth_log(*args) + "\n"
     active_log.write(string.encode("utf-8"))  # type: ignore
     active_log.flush()  # type: ignore
     return string

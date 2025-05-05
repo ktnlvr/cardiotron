@@ -1,8 +1,12 @@
+from constants import ASSUMED_TIMEONE_OFFSET_S
 import network
 import random
 import socket
+import ntptime
 from secrets import secrets
 from logging import eth_log
+import machine
+import time
 
 ssid = secrets["ssid"]
 password = secrets["password"]
@@ -40,6 +44,14 @@ def connect_ap(wlan, ssid):
             eth_log("Wifi connection successful!")
             network_info = wlan.ifconfig()
             eth_log(f"IP: {network_info[0]}")
+            ntptime.settime()
+
+            rtc = machine.RTC()
+            ts_utc = time.mktime(rtc.datetime())
+            ts_local = ts_utc + ASSUMED_TIMEONE_OFFSET_S
+            lt = time.localtime(ts_local)
+            rtc.datetime(lt)
+            eth_log(f"Time set!")
 
         yield wlan_status
         eth_log(f"Wlan status {wlan_status}, retrying ({tries_left} tries left)")

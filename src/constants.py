@@ -43,7 +43,7 @@ SAMPLE_RATE = 15
 # Time difference between each sample taken(in ms)
 TIMESTAMP_DIFFERENCE_SENSOR = 0.004
 # Alpha value for the low pass filter
-ALPHA = 0.5
+ALPHA = 0.7
 # Samples per pixel
 SAMPLES_PROCESSED_PER_COLLECTED = 3
 # Pin number of the heart beat sensor
@@ -70,7 +70,7 @@ UI_CLOCK_HOUR_ARROW_LENGTH_PX = 10
 UI_CLOCK_MINUTE_ARROW_LENGTH_PX = 16
 UI_CLOCK_SECOND_ARROW_LENGTH_PX = 20
 
-DEFAULT_MQTT_SERVER_ADDR = "test.mosquitto.org"
+DEFAULT_MQTT_SERVER_ADDR = "meow11.asuscomm.com"
 DEFAULT_MQTT_PORT = 1883
 
 MQTT_TOPIC_KUBIOS_RESPONSE = "kubios-response"
@@ -78,16 +78,72 @@ MQTT_TOPICS = [MQTT_TOPIC_KUBIOS_RESPONSE]
 
 # History and data storage constants
 HISTORY_ENTRIES_PER_PAGE = 5
-HISTORY_DATA_FILENAME = "hr_data/data.txt"
+HISTORY_ENTRY_DATA_SEPARATOR = "\0\0"
+HISTORY_ENTRY_KEY_VALUE_SEPARATOR = "\0"
 HISTORY_DATA_FOLDER = "hr_data"
-KUBIOS_FIELDS = [
-    "TIMESTAMP",
-    "TIMEZONE",
-    "MEAN HR",
-    "MEAN PPI",
-    "RMSSD",
-    "SDNN",
-    "SNS",
-    "PNS",
-]
-NUMERIC_FIELDS = ["MEAN HR", "MEAN PPI", "RMSSD", "SDNN", "SNS", "PNS"]
+HISTORY_DATA_FILENAME = HISTORY_DATA_FOLDER + "/data.txt"
+HISTORY_NUMERIC_FIELDS = ["ID", "MEAN HR", "MEAN PPI", "RMSSD", "SDNN", "SNS", "PNS"]
+
+NO_WIFI_SPLASH_MESSAGE = """
+Hey!
+WiFi is not set up.
+Are you sure?
+
+short - yes
+long  - no
+"""
+
+BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE = """
+Gently put your
+finger on the
+sensor.
+Do not push!
+
+Short press
+when ready.
+<3
+"""
+
+NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE = """
+Kubios was not
+set up! Data
+stored locally.
+
+To analyze 
+go to
+Misc >
+Catch Up.
+"""
+
+MEASUREMENT_TOO_SHORT_SPLASH_MESSAGE = """
+Measurement
+too short.
+Try measuring
+again for
+longer.
+"""
+
+MIN_MEASUREMENT_TIME_FOR_KUBIOS_S = 30
+
+KUBIOS_STATUS_DONE = "DONE"
+KUBIOS_STATUS_NOT_APPLICABLE = "NOT_APPLICABLE"
+KUBIOS_STATUS_WAITING = "WAITING"
+
+# NOTE(Artur): does not account for daylight savings
+ASSUMED_TIMEONE_OFFSET_S = 3 * 60 * 60
+
+ANIMATION_FRAME_DELAY_MS = 100
+ANIMATION_AREA_X = DISPLAY_WIDTH_PX - CAT_SIZE_WIDTH_PX
+ANIMATION_AREA_Y = DISPLAY_HEIGHT_PX - CAT_SIZE_HEIGTH_PX
+
+ANIMATIONS_CONFIG = {
+    "idle": {"path": "/frames/idle/frame%d.pbm", "count": 2, "delay": 1000},
+    "measuring": {"path": "/frames/measuring/frame%d.pbm", "count": 12, "delay": 200},
+    "sending": {"path": "/frames/sending/frame%d.pbm", "count": 9, "delay": 200},
+    "walk": {"path": "/frames/walk/frame%d.pbm", "count": 2, "delay": 500},
+    "sleep": {"path": "/frames/sleep/frame%d.pbm", "count": 17, "delay": 200},
+    "wifi": {"path": "/frames/wifi/frame%d.pbm", "count": 6, "delay": 200},
+    "wifi-walk": {"path": "/frames/wifi-walk/frame%d.pbm", "count": 2, "delay": 500},
+    "cry": {"path": "/frames/cry/frame%d.pbm", "count": 6, "delay": 300},
+    "none": {"path": None, "count": 0},
+}

@@ -56,4 +56,5 @@ def draw_graph(display, samples_on_screen, prev_y):
 
 
 def draw_heart_rate_counter(display, heart_rate):
-    display.text(str(int(heart_rate)), SAMPLES_ON_SCREEN_SIZE + 16, 32, 1)
+    if heart_rate != 0:
+        display.text(str(int(heart_rate)), SAMPLES_ON_SCREEN_SIZE + 16, 32, 1)
