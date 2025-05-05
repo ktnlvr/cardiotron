@@ -314,8 +314,6 @@ class Machine(HAL):
                 timer_str += " Ready!"
             self.display.text(timer_str, 0, 0, 1)
 
-        self.request_redraw()
-
         self.last_filtered_sample = filtered_sample
         self.last_dy = dy
 
