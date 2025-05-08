@@ -76,7 +76,7 @@ class HistoryUi:
         MICRO_UI_GAP_PX = 1
 
         for i, string in enumerate(output):
-            y = (i + 1) * (CHAR_SIZE_HEIGHT_PX + MICRO_UI_GAP_PX) + UI_MARGIN
+            y = (i + 1) * (CHAR_SIZE_HEIGHT_PX + MICRO_UI_GAP_PX)
             self.display.text(
                 string,
                 0,
