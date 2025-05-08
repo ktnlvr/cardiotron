@@ -131,19 +131,3 @@ KUBIOS_STATUS_WAITING = "WAITING"
 
 # NOTE(Artur): does not account for daylight savings
 ASSUMED_TIMEONE_OFFSET_S = 3 * 60 * 60
-
-ANIMATION_FRAME_DELAY_MS = 100
-ANIMATION_AREA_X = DISPLAY_WIDTH_PX - CAT_SIZE_WIDTH_PX
-ANIMATION_AREA_Y = DISPLAY_HEIGHT_PX - CAT_SIZE_HEIGTH_PX
-
-ANIMATIONS_CONFIG = {
-    "idle": {"path": "/frames/idle/frame%d.pbm", "count": 2, "delay": 1000},
-    "measuring": {"path": "/frames/measuring/frame%d.pbm", "count": 12, "delay": 200},
-    "sending": {"path": "/frames/sending/frame%d.pbm", "count": 9, "delay": 200},
-    "walk": {"path": "/frames/walk/frame%d.pbm", "count": 2, "delay": 500},
-    "sleep": {"path": "/frames/sleep/frame%d.pbm", "count": 17, "delay": 200},
-    "wifi": {"path": "/frames/wifi/frame%d.pbm", "count": 6, "delay": 200},
-    "wifi-walk": {"path": "/frames/wifi-walk/frame%d.pbm", "count": 2, "delay": 500},
-    "cry": {"path": "/frames/cry/frame%d.pbm", "count": 6, "delay": 300},
-    "none": {"path": None, "count": 0},
-}

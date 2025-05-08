@@ -37,7 +37,7 @@ from constants import (
     PPI_SIZE,
     DEFAULT_MQTT_SERVER_ADDR,
 )
-from time import localtime, ticks_ms
+from time import localtime
 from math import tau, sin, cos
 from ringbuffer import Ringbuffer
 from machine import Timer
@@ -62,9 +62,6 @@ class Machine(HAL):
 
     def __init__(self):
         super().__init__(self.main_menu)
-        self.current_animation_name = "idle"
-        self.current_animation_frame_index = 0
-        self.last_animation_update_ms = ticks_ms()
 
         s = self.go_to_state
 
@@ -79,6 +76,7 @@ class Machine(HAL):
             ],
             s(self.main_menu),
         )
+        self.first_frame = True
         self.previous_clock_second = 0
 
         self.main_menu_ui = Ui(
@@ -96,24 +94,29 @@ class Machine(HAL):
         self.heart_rate_mean_window = Ringbuffer(MEAN_WINDOW_SIZE, "f")
         self.heart_rate_screen_samples = Ringbuffer(SAMPLES_ON_SCREEN_SIZE, "f")
         self.heart_rate_peak_screen_locations = set()
+
         self.filtered_samples = Ringbuffer(SAMPLE_SIZE, "f")
+
         self.heart_rate_samples = Ringbuffer(HEART_SAMPLES_BUFFER_SIZE, "H")
         self.heart_rate_sample_timer = Timer()
+
         self.heart_rate_last_peak_ms = None
         self.heart_rate_ppis_ms = []
         self.rmssd = 0
         self.sdnn = 0
+
         self.heart_rate_first_sane_peak_ms = 0
         self.heart_rate_measuring_start_ms = 0
+
         self.last_filtered_sample = 0
         self.last_dy = 0
+
         self.wlan_connecting_ongoing = None
         self.heart_measurement_duration_s = 0
+
         self.history_ui = HistoryUi(self)
 
-    @HAL.always_redraw
     def main_menu(self):
-        self.current_animation_name = "idle"
         self.main_menu_ui.tick()
 
     def _reset_heart_measurements(self):
@@ -142,24 +145,16 @@ class Machine(HAL):
             self.heart_rate_sample_timer.deinit()
 
     def measure_heart_rate_splash(self):
-        self.current_animation_name = "idle-heart"
-        next_state_func = self.toast(
-            BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE,
-            animation_name="prepare",
-            next_state=self.measure_heart_rate,
+        next_state = self.toast(
+            BEFORE_HEART_MEASUREMENT_SPLASH_MESSAGE, next_state=self.measure_heart_rate
         )
 
         if not self.is_kubios_ready():
-            next_state_func = self.toast(
-                NO_WIFI_SPLASH_MESSAGE,
-                animation_name="warning",
-                next_state=next_state_func,
-            )
+            next_state = self.toast(NO_WIFI_SPLASH_MESSAGE, next_state=next_state)
 
-        self.state(next_state_func)
+        self.state(next_state)
 
     def measure_heart_rate(self):
-        self.current_animation_name = "measuring"
         if self.button_long():
             self.set_heart_sensor_active(False)
             self.state(self.main_menu)
@@ -168,35 +163,29 @@ class Machine(HAL):
 
         if self.button_short():
             self.set_heart_sensor_active(False)
-            self.current_animation_name = "idle"
 
             next_state = self.display_heart_rate_analysis
 
             if len(self.heart_rate_ppis_ms) < 2:
                 next_state = self.toast(
-                    MEASUREMENT_TOO_SHORT_SPLASH_MESSAGE,
-                    animation_name="cry",
-                    previous_state=self.main_menu,
-                    next_state=self.main_menu,
+                    MEASUREMENT_TOO_SHORT_SPLASH_MESSAGE, self.main_menu, self.main_menu
                 )
             elif not self.is_kubios_ready():
-                next_state = self.toast(
-                    NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
-                    animation_name="cry",
-                    previous_state=self.measure_heart_rate,
-                    next_state=next_state,
+                self.state(
+                    self.toast(
+                        NO_KUBIOS_AFTER_MEASUREMENT_SPLASH_MESSAGE,
+                        self.measure_heart_rate,
+                        next_state,
+                    )
                 )
 
             self.state(next_state)
 
         if self.is_first_frame:
             self.set_heart_sensor_active(True)
-            self.current_animation_frame_index = 0
-            self.last_animation_update_ms = ticks_ms()
 
         value = self.heart_rate_samples.get()
         if not value:
-            self.request_redraw()
             return
 
         mean_window = self.heart_rate_mean_window
@@ -212,6 +201,7 @@ class Machine(HAL):
             filtered_sample = low_pass_filter(
                 self.last_filtered_sample, filtered_sample
             )
+
         dy = filtered_sample - self.last_filtered_sample
 
         self.filtered_samples.append(filtered_sample)
@@ -223,6 +213,7 @@ class Machine(HAL):
             )
 
         mean_window.append(filtered_sample)
+
         current_time_ms = time.ticks_ms()
 
         is_peak = is_sample_peak(
@@ -305,23 +296,24 @@ class Machine(HAL):
             )
 
             t = self.heart_measurement_duration_s
+
             timer_str = f"{t}s"
             if t >= 60:
                 m = t // 60
                 s = t % 60
                 timer_str = f"{m}:{s:02}"
+
             if t >= MIN_MEASUREMENT_TIME_FOR_KUBIOS_S:
                 timer_str += " Ready!"
+
             self.display.text(timer_str, 0, 0, 1)
 
-        self.request_redraw()
+        self.display.show()
 
         self.last_filtered_sample = filtered_sample
         self.last_dy = dy
 
-    @HAL.always_redraw
     def display_heart_rate_analysis(self):
-        self.current_animation_name = "idle-heart"
         if self.button_short():
             self.state(self.main_menu)
             self._reset_heart_measurements()
@@ -333,7 +325,6 @@ class Machine(HAL):
             return
 
         if not self.is_first_frame:
-            self.request_redraw()
             return
 
         self.set_heart_sensor_active(False)
@@ -380,9 +371,11 @@ class Machine(HAL):
             self.display.text(
                 f"{name}: {value}",
                 UI_MARGIN,
-                UI_MARGIN + (CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP) * i,
+                (CHAR_SIZE_HEIGHT_PX + UI_OPTION_GAP) * i,
                 1,
             )
+
+        self.display.show()
 
         self.aggregate_data(
             self.heart_rate_ppis_ms,
@@ -393,23 +386,14 @@ class Machine(HAL):
             self.sdnn,
         )
 
-    @HAL.always_redraw
     def history(self):
-        self.current_animation_name = "none"
         self.history_ui.history_tick()
 
-    @HAL.always_redraw
     def _history_entry(self, index):
-        self.current_animation_name = "none"
         self.history_ui.history_entry_tick(index)
 
-    def toast(
-        self, message, animation_name="alert", previous_state=None, next_state=None
-    ):
+    def toast(self, message, previous_state=None, next_state=None):
         lines = list(map(str.strip, message.strip().split("\n")))
-        self.current_animation_name = animation_name
-        self.current_animation_frame_index = 0
-        self.last_animation_update_ms = ticks_ms()
 
         def _toast_state_machine():
             if self.button_long():
@@ -425,17 +409,12 @@ class Machine(HAL):
                 self.display.text(line, 0, CHAR_SIZE_HEIGHT_PX * i)
             self.request_redraw()
 
-        # Return the state machine function for the HAL loop to execute
         return _toast_state_machine
 
-    @HAL.always_redraw
     def misc(self):
-        self.current_animation_name = "sleep"
         self.misc_ui.tick()
 
-    @HAL.always_redraw
     def brightness(self):
-        self.current_animation_name = "sleep"
         if self.button():
             self.state(self.misc)
             return
@@ -478,9 +457,10 @@ class Machine(HAL):
             1,
         )
 
+        self.request_redraw()
+
     @HAL.always_redraw
     def clock(self):
-        self.current_animation_name = "none"
         if self.is_first_frame:
             self.previous_clock_second = 0
 
@@ -496,6 +476,7 @@ class Machine(HAL):
             self.previous_clock_second = s
 
         self.display.fill(0)
+
         self.display.text(f"{h:0>2}:{m:0>2}:{s:0>2}", UI_MARGIN, UI_MARGIN)
 
         # 3 2-digit numbers and 2 colons inbetween
@@ -551,7 +532,6 @@ class Machine(HAL):
             )
 
     def connecting_wifi(self):
-        self.current_animation_name = "wifi"
         ssid = secrets["ssid"]
         if not self.wlan_connecting_ongoing:
             self.wlan_connecting_ongoing = connect_ap(self.wlan, ssid)
@@ -598,9 +578,8 @@ class Machine(HAL):
         self.request_redraw()
 
     def sync_up(self):
-        self.current_animation_name = "walk"
         if not self.is_kubios_ready():
-            self.state(self.toast("Kubios not\nset up :c", animation_name="warning"))
+            self.state(self.toast("Kubios not\nset up :c"))
             return
 
         stored_data = read_data()
@@ -618,12 +597,7 @@ class Machine(HAL):
         splash = f"Sent {incomplete_entries}\nincomplete\nentries!\n<3"
 
         self.state(
-            self.toast(
-                splash,
-                animation_name=anim,
-                previous_state=self.misc,
-                next_state=self.main_menu,
-            )
+            self.toast(splash, previous_state=self.misc, next_state=self.main_menu)
         )
 
     def on_receive_kubios_response(self, response: dict):
@@ -673,9 +647,7 @@ class Machine(HAL):
 
         return False
 
-    @HAL.always_redraw
     def wifi_connected(self):
-        self.current_animation_name = "wifi-walk"
         if self.button():
             self.state(self.main_menu)
 
@@ -687,3 +659,6 @@ class Machine(HAL):
 
         self.display.text("Connected!", 0, 0, 1)
         self.display.text(ipv4, 0, CHAR_SIZE_HEIGHT_PX, 1)
+        self.request_redraw()
+
+        self.connect_mqtt(DEFAULT_MQTT_SERVER_ADDR)

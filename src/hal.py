@@ -1,6 +1,6 @@
 import json
 from machine import Pin, I2C, ADC
-from time import ticks_ms, ticks_diff
+from time import ticks_ms
 from gc import collect as gc_collect
 from constants import (
     ROTARY_BUTTON_DEBOUNCE_MS,
@@ -21,10 +21,6 @@ from constants import (
     DEFAULT_MQTT_PORT,
     MQTT_TOPICS,
     MQTT_TOPIC_KUBIOS_RESPONSE,
-    ANIMATION_FRAME_DELAY_MS,
-    ANIMATIONS_CONFIG,
-    ANIMATION_AREA_X,
-    ANIMATION_AREA_Y,
 )
 import ssd1306
 import os
@@ -32,7 +28,6 @@ from utils import hash_int_list
 from wifi import make_wlan
 from logging import log, eth_log
 from umqtt.simple import MQTTClient
-import framebuf
 
 
 # Hardware abstraction layer over the Pico W
@@ -74,47 +69,6 @@ class HAL:
         self.mqtt_client = None
         self.mqtt_client_id = None
 
-        self.animations = self._load_animations()
-
-    def _load_animation(self, path_pattern, frame_count, width, height):
-        frames = []
-        if not path_pattern or frame_count == 0:
-            return frames
-
-        print(f"Loading animation: {path_pattern} ({frame_count} frames)")
-        for n in range(1, frame_count + 1):
-            filename = path_pattern % n
-            try:
-                with open(filename, "rb") as f:
-                    f.readline()  # Magic number P4
-                    f.readline()  # Comment (optional)
-                    dims = f.readline()  # Dimensions
-                    data = bytearray(f.read())
-                fbuf = framebuf.FrameBuffer(data, width, height, framebuf.MONO_HLSB)
-                frames.append(fbuf)
-            except OSError as e:
-                print(f"Error loading frame {filename}: {e}")
-            except Exception as e:
-                print(f"Unexpected error loading frame {filename}: {e}")
-
-        if not frames:
-            print(f"Warning: No frames loaded for {path_pattern}")
-        return frames
-
-    def _load_animations(self):
-        loaded_anims = {}
-        for name, config in ANIMATIONS_CONFIG.items():
-            if config["path"] and config["count"] > 0:
-                loaded_anims[name] = self._load_animation(
-                    config["path"],
-                    config["count"],
-                    CAT_SIZE_WIDTH_PX,
-                    CAT_SIZE_HEIGTH_PX,
-                )
-            else:
-                loaded_anims[name] = []
-        return loaded_anims
-
     def _rotary_knob_press(self, _):
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_ms():
             return
@@ -131,7 +85,7 @@ class HAL:
         if self.rotary_debounce_timer_ms + ROTARY_BUTTON_DEBOUNCE_MS >= ticks_now_ms:
             return
 
-        dt_ms = ticks_diff(ticks_now_ms, self.rotary_debounce_timer_ms)
+        dt_ms = ticks_now_ms - self.rotary_debounce_timer_ms
         if dt_ms > LONG_PRESS_MS:
             self.long_button_press = True
         else:
@@ -242,12 +196,6 @@ class HAL:
                 self.rotary_reset_timer_ms = 0
 
         running_state = self._state
-        if not hasattr(self, "current_animation_name"):
-            self.current_animation_name = "idle"
-        if not hasattr(self, "current_animation_frame_index"):
-            self.current_animation_frame_index = 0
-        if not hasattr(self, "last_animation_update_ms"):
-            self.last_animation_update_ms = 0
         running_state(*self._state_args, **self._state_kwargs)
 
         switching_state = not (self._state is running_state)
@@ -262,40 +210,22 @@ class HAL:
     def always_redraw(f):
         def wrapper(self):
             ret = f(self)
-            self.request_redraw()
+            self.display.show()
             return ret
 
         return wrapper
 
     def request_redraw(self):
-        animation_name = getattr(self, "current_animation_name", "none")
-        animation_frames = self.animations.get(animation_name, [])
-        animation_config = ANIMATIONS_CONFIG.get(animation_name, {})
-        frame_delay = animation_config.get("delay", ANIMATION_FRAME_DELAY_MS)
+        # TODO: just for testing purposes
+        # this is where the cat will be
+        self.display.fill_rect(
+            DISPLAY_WIDTH_PX - CAT_SIZE_WIDTH_PX,
+            DISPLAY_HEIGHT_PX - CAT_SIZE_HEIGTH_PX,
+            DISPLAY_WIDTH_PX,
+            DISPLAY_HEIGHT_PX,
+            1,
+        )
 
-        if animation_frames:
-            self.display.fill_rect(
-                ANIMATION_AREA_X,
-                ANIMATION_AREA_Y,
-                CAT_SIZE_WIDTH_PX,
-                CAT_SIZE_HEIGTH_PX,
-                0,
-            )
-
-            if animation_frames:
-                now = ticks_ms()
-                if ticks_diff(now, self.last_animation_update_ms) >= frame_delay:
-                    self.last_animation_update_ms = now
-                    self.current_animation_frame_index = (
-                        self.current_animation_frame_index + 1
-                    ) % len(animation_frames)
-
-                frame_to_draw = animation_frames[self.current_animation_frame_index]
-                self.display.blit(
-                    frame_to_draw,
-                    ANIMATION_AREA_X,
-                    ANIMATION_AREA_Y,
-                )
         self.display.show()
 
     def invert_display(self):
@@ -304,6 +234,7 @@ class HAL:
 
     @staticmethod
     def flush_files():
+
         # Micropython-specific function
         os.sync()  # type: ignore
 
