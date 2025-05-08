@@ -21,8 +21,9 @@ Embedded heart sensor with supporting cloud infrastructure. Now with support for
 3. Open Thonny, navigate to "View" > "Files" and check that the "lib" folder is non-empty.
 4. Clone the project `git clone https://github.com/ktnlvr/cardiotron.git`.
 5. Install `mpremote` with `pip install mpremote`.
-6. Run the build command for your system: `.\build.cmd` for Windows or `./build.sh` for linux.
-7. Done! The Pico should be in order.
+6. Input your network credentials in the `src/secrets.py` file filling the SSID and password fields.
+7. Run the build command for your system: `.\build.cmd` for Windows or `./build.sh` for linux.
+8. Done! The Pico should be in order.
 
 ### Running the Server
 
