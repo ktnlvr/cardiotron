@@ -32,6 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/ktnlvr/cardiotron/refs/heads/main/s
 ```
 
 In any other OS:
+
 0. First, make sure you have [Docker](https://www.docker.com) installed.
 1. Clone the project if you haven't already `git clone https://github.com/ktnlvr/cardiotron.git`.
 2. Enter the `server` folder inside the new clonned cardiotron folder
