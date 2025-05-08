@@ -15,7 +15,7 @@ Embedded heart sensor with supporting cloud infrastructure. Now with support for
 
 ### Running the Pico
 
-0. Before proceeding, save all the sensetive data on another drive and wipe the pico clean.
+0. Before proceeding, save all the sensitive data on another drive and wipe the pico clean.
 1. Follow the library setup instructions at [Metropolia's Pico Setup Guide](https://gitlab.metropolia.fi/lansk/pico-test).
 2. Close all the apps that might use the COM port (VSCode, Thonny).
 3. Open Thonny, navigate to "View" > "Files" and check that the "lib" folder is non-empty.
@@ -26,7 +26,20 @@ Embedded heart sensor with supporting cloud infrastructure. Now with support for
 
 ### Running the Server
 
-Unai San, pls :з
+In a linux environment you can run the following one liner to setup the server:
+```
+curl -fsSL https://raw.githubusercontent.com/ktnlvr/cardiotron/refs/heads/main/server/server-setup.sh | sudo bash
+```
+
+In any other OS:
+0. First, make sure you have [Docker](https://www.docker.com) installed.
+1. Clone the project if you haven't already `git clone https://github.com/ktnlvr/cardiotron.git`.
+2. Enter the `server` folder inside the new clonned cardiotron folder
+3. In your terminal of preference run `docker compose -f compose.yaml up -d`
+
+To manage the server simply run the same command again in the server folder to start the containers or run
+`docker compose -f compose.yaml down`
+to stop them.
 
 ## Usage
 
